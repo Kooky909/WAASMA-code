@@ -1,24 +1,12 @@
-from flask import request, jsonify
+from flask import Flask, request, jsonify
 import json
 from bson import json_util, ObjectId
 from flask_cors import CORS
-
-from flask import Flask
-from pymongo import MongoClient
+from db_config import user_collection
 
 app = Flask(__name__)
 #CORS(app)
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
-
-client = MongoClient('localhost', 27017)
-
-# This is a Mongodb database
-db = client.WAASMA_flaskdb
-user_collection = db.user_collection  # Collection names
-w_sensor_collection = db.w_sensor_collection
-a_sensor_collection = db.a_sensor_collection
-p_sensor_collection = db.p_sensor_collection
-system_collection = db.system_collection
 
 @app.route('/')
 def hello_world():
