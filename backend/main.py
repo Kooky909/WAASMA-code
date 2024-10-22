@@ -6,17 +6,25 @@ from flask import jsonify
 import json
 from bson import json_util
 import threading
+import time
+from collections import deque
+from app import Flask_App
 
 system_state = {
     "state":"Initial",
     "Sensor Groups":None,
     "Sensor List":[],
     "current readings":[],
-    "reading_lock":threading.Lock()
+    "reading_lock":threading.Lock(),
+    "terminate":False,
+    "recent readings":deque([])
 }
 
 def main():
 
+    # initialize app
+    app_thread = threading.Thread(target=app_init())
+    app_thread.start()
 
     # initialize connection with host computer
     # should be the only connection in the setup phase
@@ -39,7 +47,6 @@ def main():
             p_sensor1 = Pressure_Sensor("COM6", 19200)
             #data = p_sensor1.connect_port()    --- implement at start of run
 
-        #pass ?
         break
 
 
@@ -62,17 +69,28 @@ def main():
     while True:
         # read the data (at preferred time intervals)
         system_state["reading_lock"].acquire()
-        #sensor_proc???
-        local_readings=system_state["current readings"].copy()
+        local_readings= (system_state["current readings"].copy(), time.time())
         system_state["reading_lock"].release()
 
+        # add to recent readings
+        system_state["recent readings"].append(local_readings)
+
+        # deletes entries older than 10 minutes
+        while len(system_state["recent readings"]) > 0:
+            if time.time() - system_state["recent readings"][0][1] > 600:
+                system_state["recent readings"].popleft()
+            else:
+                break
+
         # check the data
-        for i in range(len(local_readings)):
-            system_state["Sensor List"][i].check(local_readings[i])
+        # for i in range(len(local_readings)):
+        #     system_state["Sensor List"][i].check(local_readings[i])
 
         # store the data (DATABASE STUFF - inserting an entry into the collection)
-        w_sensor_collection.insert_one(data)
-        
+        w_sensor_collection.insert_one(local_readings)
+
+        # sleep command to ensure other threads get to run
+        time.sleep(0.1)
         
     # end main state while
 
@@ -98,8 +116,13 @@ def sensor_proc(sensor, index):
     # this sensor then sleep, shared storage needs protection
 
     # read sensor data
-    data = sensor.read_data()
+    while not system_state["terminate"]:
+        system_state["reading_lock"].acquire()
+        system_state["current readings"][index] = sensor.read_data()
+        system_state["reading_lock"].release()
+        time.sleep(0.005)
 
-    pass
+def app_init():
+    Flask_App()
 
 main()
