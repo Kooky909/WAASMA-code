@@ -1,12 +1,266 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WAASMA TEST</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+    <title>WAASMA</title>
+    <link rel="stylesheet" href="styles.css" />
+
+</head>
+<body>
+    <div class="hamburger-menu">
+        <input type="checkbox" id="menu-toggle">
+        <label for="menu-toggle" class="menu-icon">&#9776;</label>
+
+        <nav class="sidebar">
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="settings.html">Settings</a></li>
+                <li><a href="add-user.html">Users</a></li> <!--Link to add user-->
+            </ul>
+        </nav>
+    </div>
+
+    <div class = "headline">
+        <h1>Welcome to WAASMA Sensor Management</h1>
+    </div>
+
+    <div class = "container">
+        <input type="radio" name="slider" id="home" checked>
+        <input type="radio" name="slider" id="tank1">
+        <input type="radio" name="slider" id="tank2">
+        <nav>
+            <label for="home" class="home">Home</label>
+            <label for="tank1" class="tank1">Tank 1</label>
+            <label for="tank2" class="tank2">Tank 2</label>
+            <div class="slider"></div>
+        </nav>
+        <section>
+            
+            <div class="content content-1">
+                <div class="title">Configure Sensors</div>
+                <button class="configure-btn" onClick="openForm2()">Configure Sensors</button>
+                <button class="analyze-btn" onClick="openFormAT1()">Analyze Data</button>
+
+
+                <!--############## Home ################### -->
+               <div class="modal" id="configModal2">
+                    <div class="modal-content">
+                        <span class="close" onclick="closeForm2()">&times;</span>
+                        <h2>Configure Sensors for Tank 1 and Tank 2 Overview</h2>
+            
+                        <label for="numTanks">Enter number of desired tanks:</label>
+                        <input type="number" id="numTanks2" name="numTanks2" min="1" max="5" required>
+                        <br><br>
+                        
+                        <div class="tank-config">
+                            <h3>Tank 1:</h3>
+                            <div class="sensor-inputs">
+                                <label>Water quality <input type="number" id="tank2Water" name="tank2Water"></label>
+                                <label>Air quality <input type="number" id="tank2Air" name="tank2Air"></label>
+                                <label>Pressure <input type="number" id="tank2Pressure" name="tank2Pressure"></label>
+                            </div>
+                        </div>
+
+                        <div class="tank-config">
+                            <h3>Tank 2:</h3>
+                            <div class="sensor-inputs">
+                                <label>Water quality <input type="number" id="tank2Water" name="tank2Water"></label>
+                                <label>Air quality <input type="number" id="tank2Air" name="tank2Air"></label>
+                                <label>Pressure <input type="number" id="tank2Pressure" name="tank2Pressure"></label>
+                            </div>
+                        </div>
+            
+                        <button type="button" onclick="saveConfig()">Apply</button>
+                        <button type="button" onclick="closeForm2()">Close</button>
+                    </div>
+                </div>
+            
+                <!-- Analysis Tool Button for Tank 1 -->
+                <div class="modal" id="configModalAT1">
+                    <div class="modal-content">
+                        <span class="close" onclick="closeFormAT1()">&times;</span>
+                        <h2>Analysis Tool</h2>
+                        <div class="filter-bar">
+                            <select>
+                                <option>Select Tanks</option>
+                                <option value="tank1">Tank 1</option>
+                                <option value="tank2">Tank 2</option>
+                            </select>
+                            <select>
+                                <option>Select Sensors</option>
+                                <option value="waterQuality">Water Quality</option>
+                                <option value="airQuality">Air Quality</option>
+                                <option value="Pressure">Pressure</option>
+                            </select>
+                            <select>
+                                <option>Select Time</option>
+                                <option value="lastHour">Last Hour</option>
+                                <option value="last24Hours">Last 24 Hours</option>
+                                <option value="last7Days">Last 7 Days</option>
+                                <option value="last30Days">Last 30 Days</option>
+                            </select>
+                        </div>
+
+                        <div class="chart">
+                            <!-- Placeholder for the chart -->
+                            <p>Ratio of CO2 in water to CO2 in air:</p>
+                            <img src="chart-placeholder.png" alt="Chart displaying data comparison">
+                        </div>
+
+                        <button type="button" onclick="saveConfig()">Apply</button>
+                        <button type="button" onclick="closeFormAT1()">Close</button>
+                    </div>
+                </div>
+                <div id="graph-container" class="graph-placeholder">
+                <p>Graph will be displayed here</p>
+            </div>
+        </div>
+            <!--**************** TANK 1 ####################-->
+            <div class="content content-2">
+                <div class="title">Tank 1</div>
+                <button class="configure-btn" onClick="openForm1()">Configure Sensors</button>
+                <button class="analyze-btn" onClick="openFormAT2()">Analyze Data</button>
+
+            
+                <!-- Configuration Modal for Tank 1 -->
+                <div class="modal" id="configModal1">
+                    <div class="modal-content">
+                        <span class="close" onclick="closeForm1()">&times;</span>
+                        <h2>Configure Sensors for Tank 1</h2>
+            
+                        <label for="numTanks">Enter number of desired tanks:</label>
+                        <input type="number" id="numTanks1" name="numTanks1" min="1" max="5" required>
+                        <br><br>
+            
+                        <div class="tank-config">
+                            <h3>Tank 1:</h3>
+                            <div class="sensor-inputs">
+                                <label>Water quality <input type="number" id="tank1Water1" name="tank1Water1"></label>
+                                <label>Air quality <input type="number" id="tank1Air1" name="tank1Air1"></label>
+                                <label>Pressure <input type="number" id="tank1Pressure1" name="tank1Pressure1"></label>
+                            </div>
+                        </div>
+            
+                        <button type="button" onclick="saveConfig()">Apply</button>
+                        <button type="button" onclick="closeForm1()">Close</button>
+                    </div>
+                </div>
+
+                <!-- Analysis Tool Button for Tank 1 -->
+                <div class="modal" id="configModalAT2">
+                    <div class="modal-content">
+                        <span class="close" onclick="closeFormAT2()">&times;</span>
+                        <h2>Analysis Tool</h2>
+                        <div class="filter-bar">
+                            <select>
+                                <option>Select Tanks</option>
+                                <option value="tank1">Tank 1</option>
+                                <option value="tank2">Tank 2</option>
+                            </select>
+                            <select>
+                                <option>Select Sensors</option>
+                                <option value="waterQuality">Water Quality</option>
+                                <option value="airQuality">Air Quality</option>
+                                <option value="Pressure">Pressure</option>
+                            </select>
+                            <select>
+                                <option>Select Time</option>
+                                <option value="lastHour">Last Hour</option>
+                                <option value="last24Hours">Last 24 Hours</option>
+                                <option value="last7Days">Last 7 Days</option>
+                                <option value="last30Days">Last 30 Days</option>
+                            </select>
+                        </div>
+
+                        <div class="chart">
+                            <!-- Placeholder for the chart -->
+                            <p>Ratio of CO2 in water to CO2 in air:</p>
+                            <img src="chart-placeholder.png" alt="Chart displaying data comparison">
+                        </div>
+
+                        <button type="button" onclick="saveConfig()">Apply</button>
+                        <button type="button" onclick="closeFormAT2()">Close</button>
+                    </div>
+                </div>
+                <div id="graph-container" class="graph-placeholder">
+                    <p>Graph will be displayed here</p>
+                </div>
+            </div>
+
+        <!--Tank 2-->
+        <div class="content content-3">
+            <div class="title">Tank 2</div>
+            <button class="configure-btn" onClick="openForm3()">Configure Sensors</button>
+            <button class="analyze-btn" onClick="openFormAT3()">Analyze Data</button>
+
+            <!-- Configuration Modal for Tank 2 -->
+            <div class="modal" id="configModal3">
+                <div class="modal-content">
+                    <span class="close" onclick="closeForm3()">&times;</span>
+                    <h2>Configure Sensors for Tank 2</h2>
+        
+                    <label for="numTanks">Enter number of desired tanks:</label>
+                    <input type="number" id="numTanks2" name="numTanks2" min="1" max="5" required>
+                    <br><br>
+        
+                    <div class="tank-config">
+                        <h3>Tank 2:</h3>
+                        <div class="sensor-inputs">
+                            <label>Water quality <input type="number" id="tank2Water" name="tank2Water"></label>
+                            <label>Air quality <input type="number" id="tank2Air" name="tank2Air"></label>
+                            <label>Pressure <input type="number" id="tank2Pressure" name="tank2Pressure"></label>
+                        </div>
+                    </div>
+        
+                    <button type="button" onclick="saveConfig()">Apply</button>
+                    <button type="button" onclick="closeForm3()">Close</button>
+                </div>
+            </div>
+           
+
+            <!-- Analysis Tool Button for Tank 2 -->
+             <div class="modal" id="configModalAT3">
+                <div class="modal-content">
+                    <span class="close" onclick="closeFormAT3()">&times;</span>
+                    <h2>Analysis Tool</h2>
+                    <div class="filter-bar">
+                        <select>
+                          <option>Select Tanks</option>
+                          <option value="tank1">Tank 1</option>
+                          <option value="tank2">Tank 2</option>
+                        </select>
+                        <select>
+                          <option>Select Sensors</option>
+                          <option value="waterQuality">Water Quality</option>
+                          <option value="airQuality">Air Quality</option>
+                          <option value="Pressure">Pressure</option>
+                        </select>
+                        <select>
+                          <option>Select Time</option>
+                          <option value="lastHour">Last Hour</option>
+                          <option value="last24Hours">Last 24 Hours</option>
+                          <option value="last7Days">Last 7 Days</option>
+                          <option value="last30Days">Last 30 Days</option>
+                        </select>
+                    </div>
+
+                    <div class="chart">
+                        <!-- Placeholder for the chart -->
+                        <p>Ratio of CO2 in water to CO2 in air:</p>
+                        <img src="chart-placeholder.png" alt="Chart displaying data comparison">
+                    </div>
+
+                    <button type="button" onclick="saveConfig()">Apply</button>
+                    <button type="button" onclick="closeFormAT3()">Close</button>
+                </div>
+            </div>
+            <div id="graph-container" class="graph-placeholder">
+                <p>Graph will be displayed here</p>
+            </div>
+            
+        </div>
+    <script src="script.js"></script>
+</body>
 </html>
