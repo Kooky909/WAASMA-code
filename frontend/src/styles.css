@@ -1,0 +1,720 @@
+/*#################################################################################*/
+/* FOR INDEX.HTML*/
+/*#################################################################################*/
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    display: flex;
+    flex-direction: column; /* Align everything vertically */
+    height: 100vh;
+    background:#61718A;
+    justify-content: flex-start;
+}
+
+.headline {
+    text-align: center;
+    padding: 20px 0;
+    background-color: #333;
+    width: 100%;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+.header-container {
+    display: flex;
+    align-items: center; /* Vertically center the elements */
+    justify-content: flex-start; /* Align elements to the left */
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+    width: 100%; /* Make sure it spans the entire width of the page */
+}
+
+.hamburger-menu {
+    margin-right: 20px; /* Add some space between the hamburger menu and the headline */
+}
+
+.headline h1 {
+    font-size: 24px;
+    color: white;
+    margin: 0;
+    padding-left: 20px; /* Add padding to move the headline away from the edge */
+}
+
+.hamburger-menu {
+    position: absolute;
+    top: 0%;
+    left: 20px;
+    z-index: 999;
+}
+
+.menu-icon {
+    font-size: 30px;
+    cursor: pointer;
+    padding: 15px;
+    background-color: #333;
+    color: white;
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -250px;
+    height: 100%;
+    background-color: #333;
+    transition: left 0.3s;
+    padding-top: 60px;
+}
+
+.sidebar ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    padding: 15px;
+    text-align: left;
+}
+
+.sidebar ul li a {
+    text-decoration: none;
+    color: white;
+    font-size: 18px;
+    display: block;
+}
+
+.sidebar ul li a:hover {
+    background-color: #575757;
+}
+
+#menu-toggle {
+    display: none;
+}
+
+#menu-toggle:checked + .menu-icon + .sidebar {
+    left: 0;
+}
+
+.container {
+    max-width: 1400px;
+    width: 80%;
+    background-color: #d0d9f0;
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    margin-left: 100px;
+    margin-top: 50px;
+    
+}
+
+.container nav {
+    position: relative;
+    height: 50px;
+    width: 80%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container nav::after {
+    content: "";
+    background: silver;
+    width: 100%;
+    height: 1px;
+    position: absolute;
+    top: 47px;
+    filter: blur(0.5px);
+    
+}
+
+.container nav label {
+    position: relative;
+    display: block;
+    height: 100%;
+    width: 100%;
+    text-align: center;
+    line-height: 50px;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+#tank1:checked ~ nav label .home,
+#tank1:checked ~ nav label .tank1,
+#tank1:checked ~ nav label .tank2 {
+    color:#6F55CA;
+}
+
+.container nav .slider {
+    position: absolute;
+    height: 4.5px;
+    background-color: #6F55CA;
+    border-radius: 20px;
+    width: 33%;
+    z-index: 1 ;
+    left: 0;
+    /*bottom: 0;*/
+    top: 90%;
+    transition: all 0.3s ease;
+    /*filter: blur(0px);*/
+}
+*:focus {
+    outline:none;
+}
+.container nav label:focus,
+.container nav.slider:focus {
+    outline: none;
+}
+input[type='radio'] {
+    display: none;
+}
+
+#home:checked ~ nav .slider {
+    left: 0%;
+}
+
+#tank1:checked ~ nav .slider {
+    left: 33%;
+}
+
+#tank2:checked ~ nav .slider {
+    left: 66%;
+}
+
+#home:checked ~ nav .home {
+    color: #6F55CA;
+}
+
+#tank1:checked ~ nav .tank1 {
+    color: #6F55CA;
+}
+
+#tank2:checked ~ nav .tank2 {
+    color: #6F55CA;
+}
+
+section {
+    width: 80%;
+    margin-top: 20px;
+    position: relative;
+    text-align: center;
+}
+
+section .content {
+    display: none;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+section .content .title {
+    font-size: 21px;
+    font-weight: 600;
+    margin: 30px 0 10px 0;
+}
+
+/* Button container for Tank 1 */
+.tank-buttons {
+    display: flex;
+    gap: 20px; /* Space between buttons */
+    margin-top: 20px;
+}
+
+/* Style for both buttons */
+.tank-buttons button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+/* Button specific styles */
+.configure-btn {
+    background-color: #051650; /* Green color */
+    color: white;
+    padding: 10px;
+}
+
+.analyze-btn {
+    background-color: #051650; /* Blue color */
+    color: white;
+    padding: 10px;
+}
+
+/* Hover effect for buttons */
+.tank-buttons button:hover {
+    opacity: 0.9;
+}
+
+.graph-placeholder {
+    width: 100%;          /* Full width of the parent container */
+    height: 300px;        /* Adjust the height as needed */
+    margin-top: 20px;     /* Space between the buttons and the graph container */
+    border: 2px dashed #ccc;  /* Dashed border to indicate a placeholder */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f9f9;  /* Light background color */
+    border-radius: 10px;   /* Optional: Rounded corners */
+}
+
+#home:checked ~ section .content-1 {
+    display: block;
+}
+
+#tank1:checked ~ section .content-2 {
+    display: block;
+}
+
+#tank2:checked ~ section .content-3 {
+    display: block;
+}
+
+/* Modal Styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
+    border-radius: 5px;
+}
+.tank-config {
+    margin-bottom: 20px;
+}
+  
+.sensor-inputs {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+  
+label {
+    display: flex;
+    flex-direction: column;
+    font-weight: normal;
+}
+  
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+input[type="number"],
+input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    margin: 8px 0;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Configure sensor styling*/
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 30px;  /* Increase padding for a larger feel */
+    border: 1px solid #888;
+    width: 500px;  /* Increase the width */
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    font-size: 16px; /* Increase font size for readability */
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.sensor-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+button {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.sensor-input {
+    width: 50px;
+    padding: 5px;
+    display: none; /* Hidden initially */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* ANALYSIS TOOL STYLING*/
+/* Basic styling for modals */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+  
+.modal-content {
+    background-color: #e6e9ed;
+    padding: 20px;
+    border-radius: 8px;
+    width: 600px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+  
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 20px;
+    color: #333;
+    cursor: pointer;
+}
+  
+/* Filter bar styling */
+.filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-top:20px;
+}
+  
+.apply-btn {
+    padding: 8px;
+    padding-top: 20px;
+    background-color: #4b79a1;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+  
+.chart, .graph-placeholder {
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+  
+.chart img {
+    width: 100%;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+/*#################################################################################*/
+/* STYLES FOR ADD USER PAGE */
+/*#################################################################################*/
+form {
+    display: flex;
+    flex-direction: column; /* Stack elements vertically */
+    gap: 15px; /* Space between elements */
+}
+
+.form-group {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; /* Space between label and input */
+}
+
+#add-user-form {
+    max-width: 800px;
+    margin: 0;
+    padding-top: 15px;
+}
+label {
+    flex: 1; /* Label takes up 1 part of the space */
+    font-weight: bold; /* Make labels bold */
+}
+
+input[type="text"],
+input[type="email"],
+select {
+    flex: 2; /* Input takes up 2 parts of the space */
+    padding: 10px; /* Padding for input fields */
+    border: 1px solid #ccc; /* Border color */
+    border-radius: 4px; /* Rounded input fields */
+}
+
+/* Apple-Style Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+}
+
+input:checked + .slider {
+    background-color: #4CD964; /* Apple-style green */
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+input:disabled + .slider {
+    background-color: #e5e5e5;
+    cursor: not-allowed;
+}
+
+input:checked:disabled + .slider {
+    background-color: #b7b7b7;
+}
+
+
+button {
+    padding: 10px; /* Button padding */
+    background-color: #4158D0; /* Button background color */
+    color: white; /* Text color */
+    border: none; /* No border */
+    border-radius: 4px; /* Rounded corners */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s; /* Smooth transition */
+}
+
+button:hover {
+    background-color: #374AB7; /* Darker on hover */
+}
+/* Toggle Switch CSS */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.toggle-container {
+    width: 50%;
+    height: 50vh;
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.button {
+    background-color: #d2d2d2;
+    width: 100px;
+    height: 50px;
+    border-radius: 50px;
+    cursor: pointer;
+    position: relative;
+    transition: 0.2s;
+}
+.phone-number-section {
+    margin-bottom: 20px; /* Adds space below the phone number section */
+}
+
+
+/*#################################################################################*/
+/* SETTINGS.HTML */
+/*#################################################################################*/
+.settings-container {
+    background-color: #d0d9f0; /* Soft blue background */
+    width: 80%;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-left: 100px;
+    margin-top: 50px;
+}
+
+.settings-header h2 {
+    text-align: left;
+    color: white;
+    background-color: #3a519f;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+/* Sensor Section Styling */
+.sensor-section h3,
+.data-section h3 {
+    color: #3a519f;
+    margin-bottom: 10px;
+}
+
+.tank-settings {
+    display: block;
+    align-items: center;
+    /*justify-content: space-between;*/
+}
+.tank {
+    margin-bottom: 20px;
+}
+.tank h4 {
+    color: #3a519f;
+    padding-bottom: 10px;
+}
+
+.sensor {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.sensor span {
+    width: 30%;
+}
+
+.change-btn {
+    background-color: #3a519f;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.change-btn:hover {
+    background-color: #2a3b7f;
+}
+
+/* Data Section Styling */
+.data-setting {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.update-btn {
+    background-color: #3a519f;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.update-btn:hover {
+    background-color: #2a3b7f;
+}

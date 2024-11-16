@@ -47,6 +47,7 @@ function Users() {
 
   return (
     <>
+      <UserSettings/>
       <UserList users={users} updateUser={openEditModal} updateCallback={onUpdate} />
       <button onClick={openCreateModal}>Create New User</button>
       {isModalOpen && <div className="modal">

@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import json
 from bson import json_util, ObjectId
 from flask_cors import CORS
-from db_config import user_collection
+from db_config import user_collection, sensor_collection
 
 class Flask_App:
 
@@ -16,6 +16,49 @@ class Flask_App:
         @self.app.route('/')
         def hello_world():
             return 'Hello, World!'
+
+        @self.app.route("/sensors", methods=["GET"])
+        def get_sensors():
+            sensors_cursor = sensor_collection.find()
+            # Convert documents to JSON format using bson's json_util
+            json_sensors = list(map(lambda x: json.loads(json_util.dumps(x)), sensors_cursor))
+            return jsonify({"sensors": json_sensors})
+        
+        @self.app.route("/config_sensors", methods=["POST"])
+        def config_sensors():
+            data = request.json
+
+            if not data:
+                return (
+                    jsonify({"message": "You must include all sensor data"}),
+                    400,
+                )
+            
+            try:
+                sensor_collection.insert_one(data)
+            except Exception as e:
+                return jsonify({"message": str(e)}), 400
+
+            return jsonify({"message": "Sensors Configured!"}), 201
+        
+
+        @self.app.route("/change_range/<id>", methods=["PATCH"])
+        def change_range(id):
+            print(id)
+            sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
+            
+            # Check if the user exists
+            existing_sensor = sensor_collection.find_one(sensor_id)
+            if not existing_sensor:
+                return jsonify({"message": "Sensor not found"}), 404
+
+            data = request.json
+            print(data)
+            # Define the update operation
+            update = {"$set": data}  # Use $set to update the specified fields
+            sensor_collection.update_one(sensor_id, update)
+
+            return jsonify({"message": "Sensor range updated."}), 200
 
         @self.app.route("/users", methods=["GET"])
         def get_users():
