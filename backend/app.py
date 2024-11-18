@@ -5,6 +5,8 @@ from flask_cors import CORS
 from db_config import user_collection, sensor_collection
 
 class Flask_App:
+    # Shared with main
+    system_state=None
 
     # constructor
     def __init__(self) -> None:
