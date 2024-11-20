@@ -20,7 +20,8 @@ system_state = {
     "current readings": [],
     "reading_lock": threading.Lock(),
     "terminate": False,
-    "recent readings": deque([])
+    "recent readings": deque([]),
+    "New User Settings": False
 }
 
 
@@ -89,15 +90,21 @@ def main():
 
     # main state
     while True:
-        # check the data
-        # for i in range(len(local_readings)):
-        #     system_state["Sensor List"][i].check(local_readings[i])
+        system_state["state_lock"].acquire()
+        if system_state["New User Settings"]:
+            # For Haley, database get the new settings (just high/low rn I think)
+            # We should be able to modify high/low with something like this
+            # When a new change is sent, flip the system_state["New user settings"] to true
+            # for setting in new_settings:
+            #    sensor_list[setting["name"]]["high"] = ???
+            #    sensor_list[setting["name"]]["low"] = ???
+            # end For Haley
+            system_state["New User Settings"] = True
 
-        # store the data (DATABASE STUFF - inserting an entry into the collection)
-        w_sensor_collection.insert_one(local_readings)
+        system_state["state_lock"].release()
 
         # sleep command to ensure other threads get to run
-        time.sleep(0.1)
+        time.sleep(0.5)
 
     # end main state while
 
@@ -134,6 +141,12 @@ def sensor_proc(sensor_wrapper):
         current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time":time.time()}
         sensor_wrapper["recent readings"].append(current_reading)
 
+        high = sensor_wrapper["high"]
+        low = sensor_wrapper["low"]
+
+        if current_reading["value"] > high or current_reading < low:
+            notification(sensor_wrapper)
+
         while len(sensor_wrapper["recent readings"]) > 0:
             if time.time() - sensor_wrapper["recent readings"][0]["time"] > 600:
                 sensor_wrapper["recent readings"].popleft()
@@ -148,6 +161,11 @@ def sensor_proc(sensor_wrapper):
 
         time.sleep(0.1)
 
+def notification(sensor):
+    print("Sensor value out of range: ")
+    print("sensor " + sensor["name"] +" read value " + \
+          sensor["recent readings"][-1])
+    print("Not with " + sensor["low"] + "-" + sensor["high"] + " range")
 
 def app_init(state):
     Flask_App(state)
