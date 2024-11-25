@@ -23,41 +23,31 @@ const AnalysisTool = () => {
     const [selectedTank, setSelectedTank] = useState('');
     const [selectedSensor, setSelectedSensor] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
-  
-    const handleTankChange = (e) => {
-        setSelectedTank(e.target.value);
-    };
-  
-    const handleSensorChange = (e) => {
-        setSelectedSensor(e.target.value);
-    };
-  
-    const handleTimeChange = (e) => {
-        setSelectedTime(e.target.value);
-    };
 
     const onSubmit = async (e) => {
         e.preventDefault()
 
         const data = {
-            range
+            selectedTank,
+            selectedSensor,
+            selectedTime
         }
         console.log(data)
-        const url = `http://127.0.0.1:5000/change_range/${sensorChange._id}`;
+        const url = `http://127.0.0.1:5000/analysis_query/`;
         const options = {
-            method: "PATCH",
+            method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(data)
         }
         const response = await fetch(url, options)
-        if (response.status !== 201 && response.status !== 200) {
+        const sensor_data = await response.json();
+        console.log(sensor_data);
+        /*if (response.status !== 201 && response.status !== 200) {
             const data = await response.json()
             alert(data.message)
-        } else {
-            updateCallback()
-        }
+        }*/
     }
 
 
@@ -67,31 +57,33 @@ const AnalysisTool = () => {
         <form onSubmit={onSubmit} className="filter-bar">
             <div>
                 <label htmlFor="tankSelect">Select Tanks:</label>
-                <select id="tankSelect" value={selectedTank} onChange={handleTankChange}>
+                <select id="tankSelect" value={selectedTank} onChange={(e) => setSelectedTank(e.target.value)}>
                     <option value="">Select Tanks</option>
-                    <option value="tank1">Tank 1</option>
-                    <option value="tank2">Tank 2</option>
+                    <option value="1">Tank 1</option>
+                    <option value="2">Tank 2</option>
+                    <option value="both">All Tanks</option>
                 </select>
             </div>
 
             <div>
                 <label htmlFor="sensorSelect">Select Sensors:</label>
-                <select id="sensorSelect" value={selectedSensor} onChange={handleSensorChange}>
+                <select id="sensorSelect" value={selectedSensor} onChange={(e) => setSelectedSensor(e.target.value)}>
                     <option value="">Select Sensors</option>
-                    <option value="waterQuality">Water Quality</option>
-                    <option value="airQuality">Air Quality</option>
-                    <option value="pressure">Pressure</option>
+                    <option value="Water">Water Quality</option>
+                    <option value="Air">Air Quality</option>
+                    <option value="Pressure">Pressure</option>
+                    <option value="all">All Sensors</option>
                 </select>
             </div>
 
             <div>
                 <label htmlFor="timeSelect">Select Time:</label>
-                <select id="timeSelect" value={selectedTime} onChange={handleTimeChange}>
+                <select id="timeSelect" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
                     <option value="">Select Time</option>
                     <option value="lastHour">Last Hour</option>
                     <option value="last24Hours">Last 24 Hours</option>
                     <option value="last7Days">Last 7 Days</option>
-                    <option value="last30Days">Last 30 Days</option>
+                    <option value="last30Days">Last 14 Days</option>
                 </select>
             </div>
 

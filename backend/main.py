@@ -1,8 +1,7 @@
 from w_sensor import Water_Sensor
 from a_sensor import Air_Sensor
 from p_sensor import Pressure_Sensor
-from db_config import user_collection, w_sensor_collection, a_sensor_collection, p_sensor_collection, \
-    sensor_config_collection
+from db_config import user_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection, sensor_collection
 from flask import jsonify
 import json
 from bson import json_util

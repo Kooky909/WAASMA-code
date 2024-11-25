@@ -5,6 +5,7 @@ const CreateUserForm = ({ existingUser = {}, updateCallback }) => {
     const [firstName, setFirstName] = useState(existingUser.firstName || "");
     const [lastName, setLastName] = useState(existingUser.lastName || "");
     const [email, setEmail] = useState(existingUser.email || "");
+    const [role, setRole] = useState(existingUser.role || "");
 
     const updating = Object.entries(existingUser).length !== 0
 
@@ -14,7 +15,8 @@ const CreateUserForm = ({ existingUser = {}, updateCallback }) => {
         const data = {
             firstName,
             lastName,
-            email
+            email,
+            role
         }
         const url = "http://127.0.0.1:5000/" + (updating ? `update_user/${existingUser._id}` : "create_user")
         const options = {
@@ -60,6 +62,15 @@ const CreateUserForm = ({ existingUser = {}, updateCallback }) => {
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                />
+            </div>
+            <div>
+                <label htmlFor="role">Role:</label>
+                <input
+                    type="text"
+                    id="role"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
                 />
             </div>
             <button type="submit">{updating ? "Update" : "Create"}</button>

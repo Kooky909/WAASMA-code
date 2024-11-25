@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ConfigSensorsForm from "./ConfigSensorsForm";
 import AnalysisTool from "./AnalysisTool";
 import HomeDisplay from "./HomeDisplay";
@@ -11,8 +11,9 @@ function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const [sensors, setSensors] = useState({});
 
-  /*useEffect(() => {
+  useEffect(() => {
     fetchSensors()
   }, []);
 
@@ -27,11 +28,11 @@ function Home() {
     }));
     console.log(formattedSensors);
     setSensors(formattedSensors);
-  };*/
+  };
 
   const onUpdate = () => {
     closeModal()
-    //fetchSensors()
+    fetchSensors()
   }
   
   const changeTab = (tab) => {
@@ -83,7 +84,7 @@ function Home() {
             <h2>Home Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
             <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <RealTimeChart/>
+            <HomeDisplay/>
           </div>
         )}
         {activeTab === 'tank1' && (
@@ -91,7 +92,9 @@ function Home() {
             <h2>Tank 1 Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
             <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <RealTimeChart/>
+            <SensorDisplay inputSensor={sensors[0]} />
+            <SensorDisplay inputSensor={sensors[1]} />
+            <SensorDisplay inputSensor={sensors[2]} />
           </div>
         )}
         {activeTab === 'tank2' && (
@@ -99,14 +102,16 @@ function Home() {
             <h2>Tank 2 Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
             <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <RealTimeChart/>
+            <SensorDisplay inputSensor={sensors[3]} />
+            <SensorDisplay inputSensor={sensors[4]} />
+            <SensorDisplay inputSensor={sensors[5]} />
           </div>
         )}
         {isModalOpen && activeTab && isConfigOpen && (
           <div className="modal">
             <div className="modal-content">
               <span className="close" onClick={closeModal}>&times;</span>
-              <ConfigSensorsForm activeTab={activeTab} updateCallback={onUpdate} />
+              <ConfigSensorsForm updateCallback={onUpdate} />
             </div>
           </div>
         )}

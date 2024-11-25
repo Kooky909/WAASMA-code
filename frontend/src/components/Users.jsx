@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import UserList from "./UserList";
+import UserSettings from "./UserSettings";
 import CreateUserForm from "./CreateUserForm";
 
 function Users() {

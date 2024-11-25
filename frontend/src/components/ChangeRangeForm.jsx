@@ -3,15 +3,18 @@ import { useState } from "react";
 const ChangeRangeForm = ({ sensorChange = {}, updateCallback }) => {
     console.log(sensorChange._id);
 
-    const [range, setRange] = useState(sensorChange.range || "");
+    const [range_low, setRangeLow] = useState(sensorChange.range_low || "");
+    const [range_high, setRangeHigh] = useState(sensorChange.range_high || "");
 
     const onSubmit = async (e) => {
         e.preventDefault()
 
         const data = {
-            range
+            range_low,
+            range_high
         }
         console.log(data)
+        console.log(sensorChange._id)
         const url = `http://127.0.0.1:5000/change_range/${sensorChange._id}`;
         const options = {
             method: "PATCH",
@@ -33,12 +36,21 @@ const ChangeRangeForm = ({ sensorChange = {}, updateCallback }) => {
     return (
         <form onSubmit={onSubmit}>
             <div>
-                <label htmlFor="range">Range:</label>
+                <label htmlFor="range_low">Range-low:</label>
                 <input
                     type="text"
-                    id="range"
-                    value={range}
-                    onChange={(e) => setRange(e.target.value)}
+                    id="range_low"
+                    value={range_low}
+                    onChange={(e) => setRangeLow(e.target.value)}
+                />
+            </div>
+            <div>
+                <label htmlFor="range_high">Range-high:</label>
+                <input
+                    type="text"
+                    id="range_high"
+                    value={range_high}
+                    onChange={(e) => setRangeHigh(e.target.value)}
                 />
             </div>
             <button type="submit">{"Update"}</button>

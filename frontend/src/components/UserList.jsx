@@ -25,6 +25,8 @@ const UserList = ({ users, updateUser, updateCallback }) => {
                     <th>First Name</th>
                     <th>Last Name</th>
                     <th>Email</th>
+                    <th>Role</th>
+                    <th>Notifications</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -34,6 +36,8 @@ const UserList = ({ users, updateUser, updateCallback }) => {
                         <td>{user.firstName}</td>
                         <td>{user.lastName}</td>
                         <td>{user.email}</td>
+                        <td>{user.role}</td>
+                        <td>{user.notifs}</td>
                         <td>
                             <button onClick={() => updateUser(user)}>Update</button>
                             <button onClick={() => onDelete(user._id)}>Delete</button>

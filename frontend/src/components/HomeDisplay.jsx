@@ -1,79 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend, Filler } from 'chart.js';
 
-// Register components in Chart.js
-ChartJS.register(CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend);
+// Register required Chart.js components
+ChartJS.register(CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend, Filler);
 
 const HomeDisplay = () => {
-
-    useEffect (() => {
-        // Update the chart data every second
-        const intervalId = setInterval(addData, 1000);
-
-        // Cleanup interval on component unmount
-        return () => clearInterval(intervalId);
-    }, []);
-
-    /*useEffect(() => {
-        fetchSensors()
-    }, []);
-
-    const fetchSensors = async () => {
-        const response = await fetch("http://127.0.0.1:5000/sensors");
-        const data = await response.json();
-
-    // Format the sensors to extract the ID correctly
-    const formattedSensors = data.sensors.map(sensor => ({
-        ...sensor,
-        _id: sensor._id.$oid // Extract the ID as a string
-        }));
-        console.log(formattedSensors);
-        setSensors(formattedSensors);
-    };
-
-    const onUpdate = () => {
-        closeModal()
-        //fetchSensors()
-    }*/
-
-    // State for the chart data
     const [chartData, setChartData] = useState({
-        labels: [],
+        labels: [], // x-axis labels (e.g., timestamps)
         datasets: [
             {
-                label: 'Sensor Data',
-                data: [],
+                label: 'Sensor 1',
+                data: [], // Sensor 1 Data
                 borderColor: 'rgba(75,192,192,1)',
                 backgroundColor: 'rgba(75,192,192,0.2)',
+                fill: true,
+                lineTension: 0.4,
+            },
+            {
+                label: 'Sensor 2',
+                data: [], // Sensor 2 Data
+                borderColor: 'rgba(192,75,192,1)',
+                backgroundColor: 'rgba(192,75,192,0.2)',
                 fill: true,
                 lineTension: 0.4,
             },
         ],
     });
 
-    // Function to add new data to the chart
+    // Add new data every second
+    useEffect(() => {
+        const interval = setInterval(() => {
+            addData();
+        }, 1000);
+
+        return () => clearInterval(interval); // Cleanup on component unmount
+    }, []);
+
     const addData = () => {
         setChartData((prevData) => {
             const newLabels = [...prevData.labels];
-            const newData = [...prevData.datasets[0].data];
+            const sensor1Data = [...prevData.datasets[0].data];
+            const sensor2Data = [...prevData.datasets[1].data];
 
-            // Add a new label and data point
+            // Add new timestamp and data points
             const newTime = new Date().toLocaleTimeString(); // Current time as label
-            const newValue = Math.floor(Math.random() * 100); // Random data for example purposes
+            const sensor1Value = Math.random() * 100; // Random data for Sensor 1
+            const sensor2Value = Math.random() * 50; // Random data for Sensor 2
 
             newLabels.push(newTime);
-            newData.push(newValue);
+            sensor1Data.push(sensor1Value);
+            sensor2Data.push(sensor2Value);
 
             // Keep only the latest 10 data points
             if (newLabels.length > 10) {
                 newLabels.shift();
-                newData.shift();
+                sensor1Data.shift();
+                sensor2Data.shift();
             }
 
             return {
                 labels: newLabels,
-                datasets: [{ ...prevData.datasets[0], data: newData }],
+                datasets: [
+                    { ...prevData.datasets[0], data: sensor1Data },
+                    { ...prevData.datasets[1], data: sensor2Data },
+                ],
             };
         });
     };
@@ -86,14 +77,16 @@ const HomeDisplay = () => {
                 options={{
                     scales: {
                         x: {
-                            type: 'time',
-                            time: {
-                                unit: 'second',
-                            },
+                            type: 'category',
+                            title: { display: true, text: 'Time' },
                         },
                         y: {
                             beginAtZero: true,
+                            title: { display: true, text: 'Value' },
                         },
+                    },
+                    plugins: {
+                        legend: { display: true },
                     },
                     animation: false,
                 }}
@@ -102,4 +95,4 @@ const HomeDisplay = () => {
     );
 };
 
-export default HomeDisplay
+export default HomeDisplay;
