@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import SensorSettings from "./SensorSettings";
 import ChangeSettingsForm from "./ChangeSettingsForm";
+import './Settings.css';
+
 
 function Settings() {
 
@@ -64,7 +66,7 @@ function Settings() {
       <SensorSettings/>
       <div class="data-section">
         <h3>DATA SETTINGS</h3>
-        <div class="data-setting">
+        <div className="data-setting">
         <table>
             <tbody>
               <tr>
