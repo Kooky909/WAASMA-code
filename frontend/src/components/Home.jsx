@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import ConfigSensorsForm from "./ConfigSensorsForm";
 import AnalysisTool from "./AnalysisTool";
 import HomeDisplay from "./HomeDisplay";
 import SensorDisplay from "./SensorDisplay";
+import SlideToggle from './SlideToggle';
 import RealTimeChart from "./RealTimeChart";
 import "../home.css";
 
@@ -11,9 +12,8 @@ function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
-  const [sensors, setSensors] = useState({});
 
-  useEffect(() => {
+  /*useEffect(() => {
     fetchSensors()
   }, []);
 
@@ -28,11 +28,11 @@ function Home() {
     }));
     console.log(formattedSensors);
     setSensors(formattedSensors);
-  };
+  };*/
 
   const onUpdate = () => {
     closeModal()
-    fetchSensors()
+    //fetchSensors()
   }
   
   const changeTab = (tab) => {
@@ -80,38 +80,35 @@ function Home() {
 
       <section>
         {activeTab === 'home' && (
-          <div className="tab-content">
+          <div className="tab-content home">
             <h2>Home Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
             <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <HomeDisplay/>
+            <RealTimeChart/>
           </div>
         )}
         {activeTab === 'tank1' && (
-          <div className="tab-content">
+          <div className="tab-content tank1">
             <h2>Tank 1 Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
             <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <SensorDisplay inputSensor={sensors[0]} />
-            <SensorDisplay inputSensor={sensors[1]} />
-            <SensorDisplay inputSensor={sensors[2]} />
+            <RealTimeChart/>
           </div>
         )}
         {activeTab === 'tank2' && (
-          <div className="tab-content">
+          <div className="tab-content tank2">
             <h2>Tank 2 Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
             <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <SensorDisplay inputSensor={sensors[3]} />
-            <SensorDisplay inputSensor={sensors[4]} />
-            <SensorDisplay inputSensor={sensors[5]} />
+            <RealTimeChart/>
           </div>
         )}
         {isModalOpen && activeTab && isConfigOpen && (
           <div className="modal">
             <div className="modal-content">
               <span className="close" onClick={closeModal}>&times;</span>
-              <ConfigSensorsForm updateCallback={onUpdate} />
+              <h3>Configure Sensors</h3>
+              <ConfigSensorsForm activeTab={activeTab} updateCallback={onUpdate} />
             </div>
           </div>
         )}
@@ -119,6 +116,7 @@ function Home() {
           <div className="modal">
             <div className="modal-content">
               <span className="close" onClick={closeModal}>&times;</span>
+              <h3>Analysis Tool</h3>
               <AnalysisTool/>
             </div>
           </div>
