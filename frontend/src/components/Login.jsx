@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import "./Login.css";
 
 function Login() {
 
@@ -42,29 +43,31 @@ function Login() {
   }
 
   return (
-    <form onSubmit={onSubmit}>
-      <h3>LOGIN!!!!</h3>
-      <div>
-        <label htmlFor="email">Email:</label>
+    <form className="login-form" onSubmit={onSubmit}>
+      <h3 className="login-title">LOGIN</h3>
+      <div className="form-group">
+        <label className="form-label" htmlFor="email">Email:</label>
         <input
+          className="form-input"
           type="text"
           id="email"
           value={userEmail}
           onChange={(e) => setEmail(e.target.value)}
         />
       </div>
-      <div>
-        <label htmlFor="password">Password:</label>
+      <div className="form-group">
+        <label className="form-label" htmlFor="password">Password:</label>
         <input
+          className="form-input"
           type="password"
           id="password"
           value={userPassword}
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
-      <button type="submit">Login</button>
+      <button className="form-button" type="submit">Login</button>
     </form>
-    );
+  );
 };
 
 export default Login;
