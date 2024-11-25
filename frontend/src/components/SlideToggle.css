@@ -1,0 +1,43 @@
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+  }
+  
+  .tabs {
+    display: flex;
+    position: relative;
+    width: 300px; /* Set total width for the tabs */
+    border: 2px solid white;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    color: #333;
+    font-weight: bold;
+    transition: color 0.3s ease;
+  }
+  
+  .tab.active {
+    color: #457CDB;
+    font-size: large;
+
+  }
+  
+  .slider {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 100%;
+    width: 33.33%; /* Adjust based on the number of tabs */
+    background-color: #007bff; /* Slider color */
+    transition: transform 0.3s ease;
+    z-index: -1; /* Places it behind the tabs' text */
+  }
+  

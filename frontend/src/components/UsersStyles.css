@@ -1,0 +1,188 @@
+.user-settings-container {
+    margin: 20px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .user-settings-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 16px;
+  }
+  
+  .user-settings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+  }
+  
+  .user-settings-row {
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .user-settings-label {
+    text-align: left;
+    font-weight: bold;
+    padding: 8px;
+  }
+  
+  .user-settings-value {
+    text-align: left;
+    padding: 8px;
+  }
+  
+  .user-settings-edit-button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+  }
+  
+  .user-settings-edit-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    width: 80%;
+    max-width: 500px;
+  }
+  
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .modal .close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Dark overlay behind modal */
+    z-index: 999; /* Behind modal but above page content */
+  }
+
+  /* USERS.jsx STYLING */
+  /* Users.css */
+
+.users-container {
+  margin: 0 auto;
+  max-width: 800px;
+  padding: 20px;
+  background-color: #d0d9f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.users-header h1 {
+  padding: 20px;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.users-table th,
+.users-table td {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+.users-table th {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+}
+
+.users-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.users-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.users-buttons button {
+  padding: 10px 15px;
+  font-size: 16px;
+  color: white;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.users-buttons button:hover {
+  background-color: #0056b3;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  border-radius: 8px;
+  z-index: 1000;
+  width: 80%;
+  max-width: 500px;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.close {
+  align-self: flex-end;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.user-header {
+  padding-top: 10px;
+  font-size: 28px;
+  color: #333; 
+  text-align: center; /* Center-aligns the text */
+  margin-bottom: 20px; 
+  font-weight: bold; 
+  text-transform: uppercase; /* Converts the text to uppercase */
+  border-top: 2px solid #333; /* Adds a decorative line */
+  padding-bottom: 10px; /* Adds spacing between the text and underline */
+}
