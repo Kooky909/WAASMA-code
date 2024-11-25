@@ -8,7 +8,7 @@ const UserSettings = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading]= useState(true); // Tracks loading state
 
-  const currentUserId = "670ab44da2c0d02c67859a36";
+  const currentUserId = "67339694bc5ff38d4a7eacb7";
 
   // Fetch user settings when the component mounts
   useEffect(() => {

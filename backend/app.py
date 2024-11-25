@@ -66,7 +66,7 @@ class Flask_App:
             print(id)
             sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
             
-            # Check if the user exists
+            # Check if the sensor exists
             existing_sensor = sensor_collection.find_one(sensor_id)
             if not existing_sensor:
                 return jsonify({"message": "Sensor not found"}), 404
@@ -197,7 +197,7 @@ class Flask_App:
             one_hour_ago = datetime.now() - timedelta(hours=1)
 
             # Query the measurements collections
-            #result_data = []
+            result_data = []
             #for collection in sensor_measurement_array:
             #    measurements_cursor = collection.find(
             #        {
@@ -213,6 +213,25 @@ class Flask_App:
 
             # Return the result data as a JSON response
             return jsonify({"sensor_data": json_data})
+        
+        @self.app.route("/user_authen/", methods=["POST"])
+        def user_authen():
+            credentials = request.json
+            print(credentials.get("userEmail"))
+
+            # Query user by email
+            user = user_collection.find_one({"email": credentials.get("userEmail")})
+            user["_id"] = str(user["_id"]) # Convert ObjectId to string
+
+            if not user:
+                return {"success": False, "message": "User does not exist"}
+
+            # Check if password matches
+            if user["password"] == credentials.get("userPassword"):
+                return {"success": True, "message": "Authentication successful", "user": user}
+                #return {"success": True, "message": "Authentication successful", "user": user}
+            else:
+                return {"success": False, "message": "Invalid password"}
 
     def run_app(self):
         self.app.run(debug=True)
