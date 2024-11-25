@@ -1,6 +1,8 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import ChangeRangeForm from "./ChangeRangeForm";
+import './Settings.css';
+
 
 const SensorSettings = () => {
 
@@ -35,48 +37,55 @@ const SensorSettings = () => {
         setCurrentSensor({})
       }
     
+      const openCreateModal = () => {
+        if (!isModalOpen) setIsModalOpen(true)
+      }
+    
       const openEditModal = (sensor) => {
         if (isModalOpen) return
         setCurrentSensor(sensor)
         setIsModalOpen(true)
       }
     
-    return <div>
-        <h2>SENSORS SETTINGS</h2>
-        <table>
+      return (
+        <div className="sensor-settings">
+          <h2 className="settings-header">SENSOR SETTINGS</h2>
+          <table className="sensor-table">
             <thead>
-                <tr>
-                    <th>Sensor Type  </th>
-                    <th>Tank #  </th>
-                    <th>Communication  </th>
-                    <th>Range  </th>
-                </tr>
+              <tr className="table-header">
+                <th>Sensor Type</th>
+                <th>Tank #</th>
+                <th>Communication</th>
+                <th>Range</th>
+              </tr>
             </thead>
             <tbody>
-                {sensors.map((sensor) => (
-                    <tr key={sensor.id}>
-                        <td>{sensor.type}</td>
-                        <td>{sensor.tank}</td>
-                        <td>{sensor.coms}</td>
-                        <td>{`${sensor.range_low}-${sensor.range_high}`}</td>
-                        <td>
-                            <button onClick={() => openEditModal(sensor)}>Change Range</button>
-                
-                        </td>
-                    </tr>
-                ))}
+              {sensors.map((sensor) => (
+                <tr key={sensor.id} className="table-row">
+                  <td>{sensor.type}</td>
+                  <td>{sensor.tank}</td>
+                  <td>{sensor.communication}</td>
+                  <td>{sensor.range}</td>
+                  <td>
+                    <button className="change-range-btn" onClick={() => openEditModal(sensor)}>
+                      Change Range
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
-            {isModalOpen && currentSensor && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <span className="close" onClick={closeModal}>&times;</span>
-                        {/* Pass selectedSensor data to the form */}
-                        <ChangeRangeForm sensorChange={currentSensor} updateCallback={onUpdate} />
-                    </div>
-                </div>
-            )}
-        </table>
-    </div>
-}
+          </table>
+          {isModalOpen && currentSensor && (
+            <div className="modal">
+              <div className="modal-content">
+                <span className="close" onClick={closeModal}>&times;</span>
+                <ChangeRangeForm sensorChange={currentSensor} updateCallback={onUpdate} />
+              </div>
+            </div>
+          )}
+        </div>
+    );
+      
+};
 
 export default SensorSettings
