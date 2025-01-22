@@ -11,7 +11,7 @@ class Sys_State:
 
 	def get(self, target):
 		self.lock.acquire()
-		out = copy.copy(parameters[target])
+		out = copy.copy(self.parameters[target])
 		self.lock.release()
 		return out
 
