@@ -87,7 +87,7 @@ def main():
             #    sensor_list[setting["name"]]["high"] = ???
             #    sensor_list[setting["name"]]["low"] = ???
             # end For Haley
-            system_state.set("New User Settings") = False
+            system_state.set("New User Settings", False)
 
         # sleep command to ensure other threads get to run
         time.sleep(0.5)
@@ -124,7 +124,7 @@ def sensor_proc(sensor_wrapper):
     # read sensor data
     while not system_state.get("terminate"):
         current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time":time.time()}
-        
+
         system_state.hard_lock()
         sensor_wrapper["recent readings"].append(current_reading)
 
