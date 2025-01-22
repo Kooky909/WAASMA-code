@@ -10,19 +10,16 @@ import threading
 import time
 from collections import deque
 from app import Flask_App
+from sys_state import Sys_State
 
-system_state = {
-    "state_lock":threading.Lock(),
+system_state = Sys_State({
     "state": "Initial",
     "Sensor Groups": 2,
     "raw Sensors": [],
     "Sensor List": {},
-    "current readings": [],
-    "reading_lock": threading.Lock(),
     "terminate": False,
-    "recent readings": deque([]),
     "New User Settings": False
-}
+})
 
 
 def main():
@@ -35,12 +32,8 @@ def main():
 
     # Wait for 6 raw sensors to be added
     while True:
-        system_state["state_lock"].acquire()
-        if len(system_state["raw Sensors"]) == system_state["Sensor Groups"] * 3:
-            system_state["state_lock"].release()
+        if len(system_state.get("raw Sensors")) == system_state.get("Sensor Groups") * 3:
             break
-
-        system_state["state_lock"].release()
 
         #* begin bulk comment out 1
         #* allow user to connect sensors
@@ -48,8 +41,7 @@ def main():
         #* read connection data from db
         #*
         #* For Haley: I want to do this in app. I am feeding the initializing function
-        #* system_state. ALL accesses to system_state MUST be in an acquire-release
-        #* as demonstrated in the above block. This is to prevent data corruption.
+        #* system_state. 
         #* Add the sensor objects to the "raw sensors" list
         #* Format them in a tuple (sensor object, name, highest value, lowest value)
         #* end For Haley
@@ -68,21 +60,18 @@ def main():
 
         #* break
         # end bulk comment out 1
+    # End Wait for 6 sensors
 
     # convert the raw sensor data to sensor wrappers
-    system_state["state_lock"].acquire()
-    for data_set in system_state["raw Sensors"]:
-        system_state["Sensor List"][data_set[1]] = new_sensor_wrapper(*dataset)
-    system_state["state_lock"].release()
+    for data_set in system_state.get("raw Sensors"):
+        system_state.add_to_dict("Sensor List", data_set[1], new_sensor_wrapper(*data_set))
 
     # need some threading action
 
     # create list of threads for each sensor
-    system_state["state_lock"].acquire()
     sensor_threads = []
-    for sensor in system_state["Sensor List"]:
+    for sensor in system_state.get("Sensor List"):
         sensor_threads.append(threading.Thread(target=sensor_proc, args=sensor))
-    system_state["state_lock"].release()
 
     # begin threads
     for thread in sensor_threads:
@@ -90,8 +79,7 @@ def main():
 
     # main state
     while True:
-        system_state["state_lock"].acquire()
-        if system_state["New User Settings"]:
+        if system_state.get("New User Settings"):
             # For Haley, database get the new settings (just high/low rn I think)
             # We should be able to modify high/low with something like this
             # When a new change is sent, flip the system_state["New user settings"] to true
@@ -99,9 +87,7 @@ def main():
             #    sensor_list[setting["name"]]["high"] = ???
             #    sensor_list[setting["name"]]["low"] = ???
             # end For Haley
-            system_state["New User Settings"] = True
-
-        system_state["state_lock"].release()
+            system_state.set("New User Settings") = False
 
         # sleep command to ensure other threads get to run
         time.sleep(0.5)
@@ -136,9 +122,10 @@ def sensor_proc(sensor_wrapper):
     # this sensor then sleep, shared storage needs protection
 
     # read sensor data
-    while not system_state["terminate"]:
-        system_state["state_lock"].acquire()
+    while not system_state.get("terminate"):
         current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time":time.time()}
+        
+        system_state.hard_lock()
         sensor_wrapper["recent readings"].append(current_reading)
 
         high = sensor_wrapper["high"]
@@ -152,12 +139,13 @@ def sensor_proc(sensor_wrapper):
                 sensor_wrapper["recent readings"].popleft()
             else:
                 break
-        system_state["state_lock"].release()
 
         # For Haley
         # Somehow current_reading needs to be recorded to a sensor
         # specific collection.
         # End For Haley
+
+        system_state.hard_release()
 
         time.sleep(0.1)
 
