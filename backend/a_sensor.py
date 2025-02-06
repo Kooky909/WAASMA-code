@@ -11,16 +11,17 @@ class Air_Sensor:
         self.com_port = com_port        #ex 'COM5'
         self.baud_rate = baud_rate        #ex 19200
         self.ser = ""
+        self.connect_port()
     
     # read data from sensor
     def read_data(self) -> int:
         try:
-            #value = self.ser.readliner()
-            #valueInString=str(value, 'UTF-8')
-            #print(valueInString)
-            # obviously the sensors would return more then just an int,
-            # I dont know what the data input will look like so there will be more here later
-            return 5
+            value = self.ser.readline()
+            valueInString=str(value, 'UTF-8')
+            if valueInString:
+                return(int(valueInString))
+            else:
+                return 600
 
         except serial.SerialException as e:
             print(f"Error reading data: {e}")

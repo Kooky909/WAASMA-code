@@ -233,10 +233,9 @@ class Flask_App:
             else:
                 return {"success": False, "message": "Invalid password"}
 
-    def run_app(self):
+    #def run_app(self):
         self.app.run(debug=True)
 
-
-if __name__ == '__main__':
-    my_app = Flask_App()
-    my_app.run_app()
+#if __name__ == '__main__':
+#my_app = Flask_App()
+#my_app.run_app()

@@ -454,7 +454,7 @@ button {
 }
 
 /* Sidebar styles - Initially hidden */
-/*.sidebar {
+.sidebar {
   position: fixed;
   top: 0;
   left: -250px;
@@ -464,15 +464,19 @@ button {
   transition: left 0.3s ease;
 }
 
+.sidebar li, a {
+  background-color: #333;
+}
+
 /* Sidebar open state */
-/*.sidebar.open {
+.sidebar.open {
   left: 0;
 }
 
 .navbar.open .menu-icon .bar {
   background-color: #575757; /* Change bar color when menu is open */
-/*}
-*/
+}
+
 /**** HOME TAB ****/
 
 
