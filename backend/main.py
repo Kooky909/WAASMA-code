@@ -33,49 +33,14 @@ def main():
 
     number = 0
 
-    # Wait for 6 raw_sensors to be added
-    while True:
-        if len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 3: # waiting for 6
-            break
-        
+    # Loops until six sensors are added
+    while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 3:        
         if number == 0:
-           raw_list = system_state.get("raw_sensors")
-           raw_list.append((Air_Sensor("COM5", 19200), "Sensor #" + str(len(raw_list) + 1), 40000, 1))
-           system_state.set("raw_sensors", raw_list)
-           number = 1
-        else:         
-           raw_list = system_state.get("raw_sensors")
-           raw_list.append((Random_Test_Sensor(), "Sensor #" + str(len(raw_list) + 1), 10, 1))
-           system_state.set("raw_sensors", raw_list)
+            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), "Sensor #" + str(len(raw_list) + 1), 10, 1))
+            number = 1
+        else:      
+            system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(len(raw_list) + 1), 40000, 1))
 
-
-           # remove weird temp buffer
-
-        #* begin bulk comment out 1
-        #* allow user to connect sensors
-        #*
-        #* read connection data from db
-        #*
-        #* For Haley: I want to do this in app. I am feeding the initializing function
-        #* system_state. 
-        #* Add the sensor objects to the "raw_sensors" list
-        #* Format them in a tuple (sensor object, name, highest value, lowest value)
-        #* end For Haley
-        #*
-        #* connection_data = list(sensor_config_collection.find())  # This returns a cursor
-        #* for entry in connection_data:
-            #* create sensor instances
-            #* i dont actually know how the config data is going to come in so we might have to reformat
-            #* print(entry)
-            #* w_sensor1 = Water_Sensor("COM4", 19200)  # enter the data and make the sensor
-            #* data = w_sensor1.connect_port()    --- implement at start of run
-            #* a_sensor1 = Air_Sensor("COM5", 19200)
-            #* data = a_sensor1.connect_port()    --- implement at start of run
-            #* p_sensor1 = Pressure_Sensor("COM6", 19200)
-            #* data = p_sensor1.connect_port()    --- implement at start of run
-
-        #* break
-        # end bulk comment out 1
     # End Wait for 6 sensors
 
     print("six sensors connected")
@@ -101,20 +66,20 @@ def main():
     # main state
     while not system_state.get("terminate"):
         if system_state.get("New User Settings"):
-            # For Haley, database get the new settings (just high/low rn I think)
-            # We should be able to modify high/low with something like this
-            # When a new change is sent, flip the system_state["New user settings"] to true
-            # for setting in new_settings:
-            #    sensor_list[setting["name"]]["high"] = ???
-            #    sensor_list[setting["name"]]["low"] = ???
-            # end For Haley
+            # 'New User Settings' boolean in system_state tells main to ask the DB
+            # for the new settings.
+
+            # There needs to be a DB query here to get new user settings
+
+            # Reset 'New User Settings'
             system_state.set("New User Settings", False)
 
-        # sleep command to ensure other threads get to run
+        # for testing purposes, ends after 10 seconds
         time.sleep(10)
         system_state.set("terminate", True)
     # end main state while
 
+    # Join all threads
     app_thread.join()
     for thread in sensor_threads:
         thread.join()
@@ -169,17 +134,11 @@ def sensor_proc(sensor_wrapper):
             else:
                 break
 
-        # For Haley
-        # Somehow current_reading needs to be recorded to a sensor
-        # specific collection.
-        # End For Haley
+        # A DB entry needs to be created here
 
         system_state.hard_release()
 
         time.sleep(0.1)
-    #system_state.hard_lock()
-    #print(sensor_wrapper["name"] + ": " + str(sensor_wrapper["recent readings"]))
-    #system_state.hard_release()
 
 def notification(sensor):
     print("Sensor value out of range: ")
