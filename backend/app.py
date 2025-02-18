@@ -3,25 +3,31 @@ import json, random
 from bson import json_util, ObjectId
 from flask_cors import CORS
 from datetime import datetime, timedelta
-from db_config import user_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection, sensor_collection
+from db_config import user_collection, sensor_collection
 
-sensor_measurement_array = [w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection]
+#sensor_measurement_array = [w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection]
 
-class Flask_App:
+class Flask_App():
     # Shared with main
     system_state=None
 
     # constructor
-    def __init__(self) -> None:
+    def __init__(self, state) -> None:
 
         self.app = Flask(__name__)
+
+        # This is a pointer to the system state object in main
+        self.state = state
         #CORS(app)
+        # This allows the frontend and backend to connect
         CORS(self.app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
+        # This is a test route ------- should prob delete
         @self.app.route('/')
         def hello_world():
             return 'Hello, World!'
 
+        # This route returns a list of sensors from the sensor collection
         @self.app.route("/sensors", methods=["GET"])
         def get_sensors():
             sensors_cursor = sensor_collection.find()
@@ -29,6 +35,7 @@ class Flask_App:
             json_sensors = list(map(lambda x: json.loads(json_util.dumps(x)), sensors_cursor))
             return jsonify({"sensors": json_sensors})
         
+        # This route updates the sensor configuration collection ?????
         #@self.app.route("/config_sensors", methods=["POST"])
         #def config_sensors():
         #    data = request.json
@@ -60,7 +67,7 @@ class Flask_App:
                 return jsonify({"message": str(e)}), 400
             return jsonify({"message": "Sensors Configured!"}), 201
 
-
+        # This route updates a high/low range values for a sensor in the sensor collection
         @self.app.route("/change_range/<id>", methods=["PATCH"])
         def change_range(id):
             print(id)
@@ -79,74 +86,7 @@ class Flask_App:
 
             return jsonify({"message": "Sensor range updated."}), 200
 
-        @self.app.route("/users", methods=["GET"])
-        def get_users():
-            users_cursor = user_collection.find()
-            # Convert documents to JSON format using bson's json_util
-            json_users = list(map(lambda x: json.loads(json_util.dumps(x)), users_cursor))
-            return jsonify({"users": json_users})
-
-
-        @self.app.route("/create_user", methods=["POST"])
-        def create_user():
-            data = request.json
-            if not data:
-                return (
-                    jsonify({"message": "You must include a first name, last name and email"}),
-                    400,
-                )
         
-            try:
-                user_collection.insert_one(data)
-            except Exception as e:
-                return jsonify({"message": str(e)}), 400
-
-            return jsonify({"message": "User created!"}), 201
-
-
-        @self.app.route("/update_user/<id>", methods=["PATCH"])
-        def update_user(id):
-            user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
-            
-            # Check if the user exists
-            existing_user = user_collection.find_one(user_id)
-            if not existing_user:
-                return jsonify({"message": "User not found"}), 404
-
-            data = request.json
-            # Define the update operation
-            update = {"$set": data}  # Use $set to update the specified fields
-            user_collection.update_one(user_id, update)
-
-            return jsonify({"message": "User updated."}), 200
-
-
-        @self.app.route("/delete_user/<id>", methods=["DELETE"])
-        def delete_user(id):
-            user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
-            
-            # Check if the user exists
-            existing_user = user_collection.find_one(user_id)
-            if not existing_user:
-                return jsonify({"message": "User not found"}), 404
-
-            result = user_collection.delete_one(user_id)
-            return jsonify({"message": "User deleted!"}), 200
-        
-        @self.app.route("/user_settings/<id>", methods=["GET"])
-        def user_settings(id):
-            print(id)
-            user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
-            
-            # Check if the user exists
-            existing_user = user_collection.find_one(user_id)
-            if not existing_user:
-                return jsonify({"message": "User not found"}), 404
-            
-            # Convert ObjectId to string for JSON serialization
-            existing_user["_id"] = str(existing_user["_id"])
-
-            return jsonify({"settings": existing_user}), 200
 
         @self.app.route("/current_sensor_data/", methods=["GET"])
         def current_sensor_data():
@@ -214,6 +154,19 @@ class Flask_App:
             # Return the result data as a JSON response
             return jsonify({"sensor_data": json_data})
         
+            
+
+
+
+
+
+
+
+        ####################################################################
+        #         USER PAGE ROUTES  -- talk to user colelction
+        ####################################################################
+        
+        # This route checks if the user entered the correct password
         @self.app.route("/user_authen/", methods=["POST"])
         def user_authen():
             credentials = request.json
@@ -233,9 +186,81 @@ class Flask_App:
             else:
                 return {"success": False, "message": "Invalid password"}
 
-    #def run_app(self):
-        self.app.run(debug=True)
+        # This route returns a list of users
+        @self.app.route("/users", methods=["GET"])
+        def get_users():
+            users_cursor = user_collection.find()
+            # Convert documents to JSON format using bson's json_util
+            json_users = list(map(lambda x: json.loads(json_util.dumps(x)), users_cursor))
+            return jsonify({"users": json_users})
 
-#if __name__ == '__main__':
-#my_app = Flask_App()
-#my_app.run_app()
+        # This route creates a user
+        @self.app.route("/create_user", methods=["POST"])
+        def create_user():
+            data = request.json
+            if not data:
+                return ( jsonify({"message": "You must include a first name, last name and email"}), 400)
+        
+            try:
+                user_collection.insert_one(data)
+            except Exception as e:
+                return jsonify({"message": str(e)}), 400
+
+            return jsonify({"message": "User created!"}), 201
+
+        # This route updates the data of a user
+        @self.app.route("/update_user/<id>", methods=["PATCH"])
+        def update_user(id):
+            user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
+            
+            # Check if the user exists
+            existing_user = user_collection.find_one(user_id)
+            if not existing_user:
+                return jsonify({"message": "User not found"}), 404
+
+            data = request.json
+            # Define the update operation
+            update = {"$set": data}  # Use $set to update the specified fields
+            user_collection.update_one(user_id, update)
+
+            return jsonify({"message": "User updated."}), 200
+
+        # This route deletes a user
+        @self.app.route("/delete_user/<id>", methods=["DELETE"])
+        def delete_user(id):
+            user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
+            
+            # Check if the user exists
+            existing_user = user_collection.find_one(user_id)
+            if not existing_user:
+                return jsonify({"message": "User not found"}), 404
+
+            result = user_collection.delete_one(user_id)
+            return jsonify({"message": "User deleted!"}), 200
+        
+        # This route returns the settings of a user
+        @self.app.route("/user_settings/<id>", methods=["GET"])
+        def user_settings(id):
+            print(id)
+            user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
+            
+            # Check if the user exists
+            existing_user = user_collection.find_one(user_id)
+            if not existing_user:
+                return jsonify({"message": "User not found"}), 404
+            
+            # Convert ObjectId to string for JSON serialization
+            existing_user["_id"] = str(existing_user["_id"])
+
+            return jsonify({"settings": existing_user}), 200
+
+    # Method to run the app - used in main
+    def run_app(self):
+        self.app.run(debug=False) 
+
+
+# Code to run the app - without main
+if __name__ == '__main__':
+   state = 1
+   my_app = Flask_App(state)
+   my_app.run_app()

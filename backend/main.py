@@ -1,22 +1,23 @@
 from w_sensor import Water_Sensor
 from a_sensor import Air_Sensor
 from p_sensor import Pressure_Sensor
-from db_config import user_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, \
-    sensor_config_collection
+from db_config import db, user_collection, sensor_config_collection, test_sensor_collection
 from flask import jsonify
 import json
 from bson import json_util
 import threading
 import time
+from datetime import datetime
 from collections import deque
-#from app import Flask_App
+from app import Flask_App
 from sys_state import Sys_State
 from random_test_sensor import Random_Test_Sensor
+from pymongo import MongoClient
 
 system_state = Sys_State({
     "state": "Initial",
     "Sensor Groups": 2,
-    "raw_sensors": [],
+    "raw_sensors": [],       # tuple = sensor object, sensor name, high, low, db collection
     "Sensor List": {},
     "terminate": False,
     "New User Settings": False
@@ -30,16 +31,27 @@ def main():
 
     # initialize connection with host computer
     # should be the only connection in the setup phase
+    # Flask takes user data and fills in the sensor collection, system state is updated here
 
     number = 0
-
+    
     # Loops until six sensors are added
-    while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 3:        
-        if number == 0:
-            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), "Sensor #" + str(len(raw_list) + 1), 10, 1))
-            number = 1
-        else:      
-            system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(len(raw_list) + 1), 40000, 1))
+    while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 3:
+
+        sensor_config = test_sensor_collection.find()
+
+        # This loops through all the sensors, the while is not needed?
+        for sensor in sensor_config:
+            # dynamically create a new collection and add to the tuple, this will read from sensor collection
+            db_name = f"{sensor["name"]}_collection"
+            #db_name = f"Sensor#{number}_collection"
+            db_collection = db[db_name]
+            db_collection.insert_one({"init": "collection created"})
+            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["name"], 10, 1, db_collection))
+            number = number + 1
+            #else:      
+            #    system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(number), 40000, 1, db_list[number]))
+            #    number = number + 1
 
     # End Wait for 6 sensors
 
@@ -98,12 +110,13 @@ def detect_sensors():
 
 
 # creates dictionary breakdown for sensor
-def new_sensor_wrapper(sensor, name, high, low):
+def new_sensor_wrapper(sensor, name, high, low, db):
     out = {
         "sensor": sensor,
         "name": name,
         "high": high,
         "low": low,
+        "db": db,
         "recent readings": deque()
     }
     return out
@@ -134,7 +147,8 @@ def sensor_proc(sensor_wrapper):
             else:
                 break
 
-        # A DB entry needs to be created here
+        # Creating a DB entry with the current reading
+        sensor_wrapper["db"].insert_one({"value": current_reading["value"], "timestamp": datetime.now()})
 
         system_state.hard_release()
 
@@ -147,7 +161,8 @@ def notification(sensor):
     print("Not with " + sensor["low"] + "-" + sensor["high"] + " range")
 
 def app_init(state):
-    #Flask_App(state)
+    my_app = Flask_App(state)
+    my_app.run_app()
     pass
 
 
