@@ -23,6 +23,7 @@ function Navbar() {
         <nav className="sidebar">
           <ul>
             <li><Link to="/home" onClick={toggleMenu}>Home</Link></li>
+            <li><Link to="/analysis" onClick={toggleMenu}>Analysis Tool</Link></li>
             <li><Link to="/settings" onClick={toggleMenu}>Settings</Link></li>
             <li><Link to="/users" onClick={toggleMenu}>Users</Link></li>
           </ul>
