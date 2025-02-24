@@ -1,4 +1,5 @@
 import React from "react"
+import './UsersStyles.css';
 
 const UserList = ({ users, updateUser, updateCallback }) => {
     const onDelete = async (id) => {
@@ -17,36 +18,38 @@ const UserList = ({ users, updateUser, updateCallback }) => {
         }
     }
 
-    return <div>
-        <h2>Users</h2>
-        <table>
+    return (
+        <div className="user-container">
+          <h2>Users</h2>
+          <table className="user-table">
             <thead>
-                <tr>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Notifications</th>
-                    <th>Actions</th>
-                </tr>
+              <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Notifications</th>
+                <th>Actions</th>
+              </tr>
             </thead>
             <tbody>
-                {users.map((user) => (
-                    <tr key={user.id}>
-                        <td>{user.firstName}</td>
-                        <td>{user.lastName}</td>
-                        <td>{user.email}</td>
-                        <td>{user.role}</td>
-                        <td>{user.notifs}</td>
-                        <td>
-                            <button onClick={() => updateUser(user)}>Update</button>
-                            <button onClick={() => onDelete(user._id)}>Delete</button>
-                        </td>
-                    </tr>
-                ))}
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <td>{user.firstName}</td>
+                  <td>{user.lastName}</td>
+                  <td>{user.email}</td>
+                  <td>{user.role}</td>
+                  <td>{user.notifs}</td>
+                  <td>
+                    <button className="update-btn" onClick={() => updateUser(user)}>Update</button>
+                    <button className="delete-btn" onClick={() => onDelete(user._id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
-        </table>
-    </div>
+          </table>
+        </div>
+    );
 }
 
 export default UserList

@@ -424,34 +424,6 @@ button {
   text-align: center;
 }
 
-/* Navbar.css */
-
-/*.navbar {
-  position: absolute;
-  top: 15px; /* Adjust the position of the hamburger menu */
-  /*left: 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  cursor: pointer;
-}
-
-.menu-icon {
-  font-size: 30px;
-  color: white;
-  cursor: pointer;
-  display: inline-block;
-  padding: 10px;
-}
-
-.bar {
-  display: block;
-  width: 30px;
-  height: 4px;
-  background-color: white;
-  margin: 6px 0;
-}
 
 /* Sidebar styles - Initially hidden */
 .sidebar {
@@ -476,11 +448,3 @@ button {
 .navbar.open .menu-icon .bar {
   background-color: #575757; /* Change bar color when menu is open */
 }
-
-/**** HOME TAB ****/
-
-
-/**** Tank 1 ****/
-
-
-/**** Tank 2 ****/

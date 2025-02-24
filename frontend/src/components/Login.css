@@ -1,6 +1,6 @@
 /* LOGIN CSS */
 .login-form {
-    max-width: 400px;
+    max-width: 700px;
     margin: 0 auto;
     padding: 75px;
     border: 1px solid #ccc;
@@ -10,41 +10,50 @@
   
 .login-title {
     text-align: center;
-    margin-bottom: 20px;
-    font-size: 1.5em;
-    color: #333;
-    background-color: #d0d9f0;
-}
-  
-.form-group {
-    margin-bottom: 15px;
-    background-color: #d0d9f0;
-}
-  
-.form-label {
-    display: block;
-    margin-bottom: 5px;
+    margin-bottom: 30px;
+    font-size: 2em; /* Make text bigger */
     font-weight: bold;
     color: #333;
     background-color: #d0d9f0;
 }
   
-.form-input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1em;
+.form-group {
+    margin-bottom: 20px;
+    background-color: #d0d9f0;
 }
   
+/* Increase label size */
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1.2em; /* Make labels larger */
+    font-weight: bold;
+    color: #333;
+    background-color: #d0d9f0;
+}
+
+/* Increase input field size */
+.form-input {
+    width: 100%;
+    padding: 12px; /* Make input fields bigger */
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1.2em; /* Increase text size in input fields */
+}
+
+/* Make button bigger */
 .form-button {
     width: 100%;
-    padding: 10px;
+    padding: 15px; /* Increase button size */
     background-color: #007bff;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     color: white;
-    font-size: 1em;
+    font-size: 1.2em; /* Make button text bigger */
     cursor: pointer;
+}
+
+.form-button:hover {
+    background-color: #0056b3;
 }
   
