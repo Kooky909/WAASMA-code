@@ -17,7 +17,7 @@ from pymongo import MongoClient
 system_state = Sys_State({
     "state": "Initial",
     "Sensor Groups": 2,
-    "raw_sensors": [],       # tuple = sensor object, sensor name, high, low, db collection
+    "raw_sensors": [],       # tuple = sensor object, sensor id, sensor name, high, low, db collection
     "Sensor List": {},
     "terminate": False,
     "New User Settings": False
@@ -47,7 +47,7 @@ def main():
             #db_name = f"Sensor#{number}_collection"
             db_collection = db[db_name]
             db_collection.insert_one({"init": "collection created"})
-            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["name"], 10, 1, db_collection))
+            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], 10, 1, db_collection))
             number = number + 1
             #else:      
             #    system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(number), 40000, 1, db_list[number]))
@@ -87,8 +87,8 @@ def main():
             system_state.set("New User Settings", False)
 
         # for testing purposes, ends after 10 seconds
-        time.sleep(10)
-        system_state.set("terminate", True)
+        #time.sleep(5)
+        #system_state.set("terminate", True)
     # end main state while
 
     # Join all threads
@@ -110,13 +110,15 @@ def detect_sensors():
 
 
 # creates dictionary breakdown for sensor
-def new_sensor_wrapper(sensor, name, high, low, db):
+def new_sensor_wrapper(sensor, id, name, high, low, db):
     out = {
         "sensor": sensor,
+        "id": id,
         "name": name,
         "high": high,
         "low": low,
         "db": db,
+        "current reading": {},
         "recent readings": deque()
     }
     return out
@@ -132,12 +134,13 @@ def sensor_proc(sensor_wrapper):
         current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time":time.time()}
 
         system_state.hard_lock()
+        sensor_wrapper["current reading"] = current_reading
         sensor_wrapper["recent readings"].append(current_reading)
 
         high = sensor_wrapper["high"]
         low = sensor_wrapper["low"]
 
-        print(sensor_wrapper["sensor"], "   ", current_reading["value"])
+        # print(sensor_wrapper["sensor"], "   ", current_reading["value"])
         if current_reading["value"] > high or current_reading["value"] < low:
             notification(sensor_wrapper)
 
@@ -148,11 +151,11 @@ def sensor_proc(sensor_wrapper):
                 break
 
         # Creating a DB entry with the current reading
-        sensor_wrapper["db"].insert_one({"value": current_reading["value"], "timestamp": datetime.now()})
+        sensor_wrapper["db"].insert_one({"value": current_reading["value"], "time": datetime.now(), "sensor_id": sensor_wrapper["id"]})
 
         system_state.hard_release()
 
-        time.sleep(0.1)
+        time.sleep(1.5)
 
 def notification(sensor):
     print("Sensor value out of range: ")
@@ -164,6 +167,5 @@ def app_init(state):
     my_app = Flask_App(state)
     my_app.run_app()
     pass
-
 
 main()

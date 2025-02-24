@@ -2,10 +2,16 @@ from flask import Flask, request, jsonify
 import json, random
 from bson import json_util, ObjectId
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+from sys_state import Sys_State
 from datetime import datetime, timedelta
-from db_config import user_collection, sensor_collection
+from db_config import user_collection, sensor_collection, test_sensor_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection
+
+from db_config import Water1_collection, Air1_collection, Pressure1_collection, Water2_collection, Air2_collection, Pressure2_collection
+import time
 
 #sensor_measurement_array = [w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection]
+sensor_measurement_array = [Water1_collection, Air1_collection, Pressure1_collection, Water2_collection, Air2_collection, Pressure2_collection ]
 
 class Flask_App():
     # Shared with main
@@ -15,6 +21,8 @@ class Flask_App():
     def __init__(self, state) -> None:
 
         self.app = Flask(__name__)
+        self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode='threading')
+        #, async_mode='eventlet'
 
         # This is a pointer to the system state object in main
         self.state = state
@@ -30,7 +38,7 @@ class Flask_App():
         # This route returns a list of sensors from the sensor collection
         @self.app.route("/sensors", methods=["GET"])
         def get_sensors():
-            sensors_cursor = sensor_collection.find()
+            sensors_cursor = test_sensor_collection.find()
             # Convert documents to JSON format using bson's json_util
             json_sensors = list(map(lambda x: json.loads(json_util.dumps(x)), sensors_cursor))
             return jsonify({"sensors": json_sensors})
@@ -74,7 +82,7 @@ class Flask_App():
             sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
             
             # Check if the sensor exists
-            existing_sensor = sensor_collection.find_one(sensor_id)
+            existing_sensor = test_sensor_collection.find_one(sensor_id)
             if not existing_sensor:
                 return jsonify({"message": "Sensor not found"}), 404
 
@@ -82,71 +90,68 @@ class Flask_App():
             print(data)
             # Define the update operation
             update = {"$set": data}  # Use $set to update the specified fields
-            sensor_collection.update_one(sensor_id, update)
+            test_sensor_collection.update_one(sensor_id, update)
 
             return jsonify({"message": "Sensor range updated."}), 200
+        
+        ####################################################################
+        #         ANALYSIS TOOL ROUTES
+        ####################################################################
 
-        
-
-        @self.app.route("/current_sensor_data/", methods=["GET"])
-        def current_sensor_data():
-            # get the current measurement for the sensor from main
-            
-            #sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id   
-            # Check if the sensor exists
-            #sensor = sensor_collection.find_one(sensor_id)
-            #if not sensor:
-            #    return jsonify({"message": "Sensor not found"}), 404   
-            # Convert ObjectId to string for JSON serialization
-            #existing_user["_id"] = str(existing_user["_id"])
-            #return jsonify({"settings": sensor_measurement}), 200
-            sensor_measurement = random.randint(1,20)
-            return jsonify({"current-measurement": sensor_measurement}), 200
-        
-        @self.app.route("/past_sensor_data/", methods=["GET"])
-        def past_sensor_data():
-            # get the past measurements for the sensor from main
-            
-            #sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id   
-            # Check if the sensor exists
-            #sensor = sensor_collection.find_one(sensor_id)
-            #if not sensor:
-            #    return jsonify({"message": "Sensor not found"}), 404   
-            # Convert ObjectId to string for JSON serialization
-            #existing_user["_id"] = str(existing_user["_id"])
-            #return jsonify({"settings": sensor_measurement}), 200
-            sensor_measurements = list(range(20))
-            return jsonify({"past-measurements": sensor_measurements}), 200
-        
         @self.app.route("/analysis_query/", methods=["POST"])
         def analysis_query():
             filters = request.json
-            print(filters.get("selectedTank"))
+            tankFilter = filters.get("selectedTank").strip()
+            sensorFilter = filters.get("selectedSensor").strip()
+            #if filters.get("selectedTime").strip() == "0":
+            #    timeFilter = 0
+            #else:
+            #    timeFilter = int(time.time()) - ( int(filters.get("selectedTime").strip()) * 3600 )
+            timeFilter = datetime.now() - timedelta(minutes=1)
+            print("tank...", tankFilter, "...")
+            print("sensor...", sensorFilter, "...")
+            print("time...", timeFilter, "...")
+            # Use sensor_collection to find needed sensors from needed tanks
+            ###### not sure, could also query both individually and compare cursors or something
 
-            # Use filters to query and return data
-            sensor_ids_cursor = sensor_collection.find(
-                {"tank": filters.get("selectedTank"), "type": filters.get("selectedSensor")},
-                {"_id": 1}  # Only get the sensor ID
-            )
-            print(list(sensor_ids_cursor))
+            if tankFilter == "all" and sensorFilter == "all":     # if all tanks and all sensors, grab everything
+                sensor_ids_cursor = test_sensor_collection.find({}, {"_id": 1})    # Only get the sensor ID
+            elif tankFilter == "all":     # if all tanks, only query sensors
+                sensor_ids_cursor = test_sensor_collection.find(
+                    {"type": filters.get("selectedSensor")},
+                    {"_id": 1}  # Only get the sensor ID
+                )
+            elif sensorFilter == "all":     # if all sensors, only query tanks
+                sensor_ids_cursor = test_sensor_collection.find(
+                    {"tank": filters.get("selectedTank")},
+                    {"_id": 1}  # Only get the sensor ID
+                )
+            else:      # if no all, query everything
+                sensor_ids_cursor = test_sensor_collection.find(
+                    {"tank": filters.get("selectedTank"), "type": filters.get("selectedSensor")},
+                    {"_id": 1}  # Only get the sensor ID
+                )
+            sensor_ids_list = list(sensor_ids_cursor)
+            sensor_ids = []
 
-            # Extract the sensor IDs from the query result
-            sensor_ids = [sensor['_id'] for sensor in sensor_ids_cursor]
+            # Get the sensor IDs from the query result
+            for sensor in sensor_ids_list:
+                sensor_ids.append(sensor['_id'])
+            print("sensor id ", sensor_ids)
 
-            # Query measurements for the last hour using the sensor IDs
-            one_hour_ago = datetime.now() - timedelta(hours=1)
+            # EXAMPLE - get last hour time: one_hour_ago = datetime.now() - timedelta(hours=1)
 
-            # Query the measurements collections
+            # Query the measurements collections --- sensor_measurement_array would have to be from sys_state
             result_data = []
-            #for collection in sensor_measurement_array:
-            #    measurements_cursor = collection.find(
-            #        {
-            #            "sensor_id": {"$in": sensor_ids},  # Match sensor IDs
-            #            "timestamp": {"$gte": one_hour_ago}  # Match measurements from the last hour
-            #        }
-            #    )
-            #    if len(list(measurements_cursor)) > 0:
-            #        result_data.append(list(measurements_cursor))
+            for collection in sensor_measurement_array:
+                # LATER GRAB COLLECTION FROM SYS STATE
+                measurements_cursor = collection.find(
+                    {"sensor_id": {"$in": sensor_ids},  # Find any "sensor_id" $in sensor_ids
+                       "time": {"$gte": timeFilter}}  # Find timestamps >= ($gte) one_hour_ago
+                )
+                measurements_list = list(measurements_cursor)
+                if measurements_list:  # Check if the list is not empty
+                    result_data.append(measurements_list)
 
             # Convert documents to JSON format using bson's json_util
             json_data = list(map(lambda x: json.loads(json_util.dumps(x)), result_data))
@@ -154,13 +159,6 @@ class Flask_App():
             # Return the result data as a JSON response
             return jsonify({"sensor_data": json_data})
         
-            
-
-
-
-
-
-
 
         ####################################################################
         #         USER PAGE ROUTES  -- talk to user colelction
@@ -253,10 +251,104 @@ class Flask_App():
             existing_user["_id"] = str(existing_user["_id"])
 
             return jsonify({"settings": existing_user}), 200
+        
+
+        #########################################
+        #      WEB SOCKET STUFF
+        #########################################
+
+        # --- WebSocket Connection ---
+        @self.socketio.on('connect')
+        def client_connect():
+            print("Client connected via WebSocket")
+            client_ip = request.remote_addr
+            sid = request.sid
+            print(f"🔵 New WebSocket Connection Attempt: {sid} from {client_ip}")
+
+            # Store connected clients if needed (for debugging)
+            if not hasattr(client_connect, "clients"):
+                client_connect.clients = set()
+            client_connect.clients.add(sid)
+
+            print(f"Currently connected clients: {len(client_connect.clients)}")
+
+        @self.socketio.on('message')
+        def client_message(data):
+            print(f"Received WebSocket message: {data}")
+            emit('response', {"message": "Hello from WebSocket!"}, broadcast=True)  # Send a response
+
+        @self.socketio.on('packet')
+        def send_packet(data):
+
+            # in system state, in the Sensor List, iterate through the sensors and return the timestamps and data
+            Sensor_List = self.state.get("Sensor List")
+            newData = {}
+            client_request = data.get("request")
+
+            if client_request == "home":
+                for sensor_id, sensor_data in Sensor_List.items():
+                    sensor_name = sensor_data["name"]  # Get the sensor name
+                    formatted_readings = []
+                    for reading in sensor_data["recent readings"]:
+                        formatted_readings.append({
+                            "time": reading["time"],
+                            "value": reading["value"]
+                        })
+
+                    newData[sensor_name] = formatted_readings # Store in the newData w/ sensor name
+                emit('packet_home', {"packet_data": newData}, broadcast=True)
+            else:
+                for sensor_id, sensor_data in Sensor_List.items():
+                    if str(sensor_id) == client_request:
+                        sensor_name = sensor_data["name"]  # Get the sensor name
+                        formatted_readings = []
+                        for reading in sensor_data["recent readings"]:
+                            formatted_readings.append({
+                                "time": reading["time"],
+                                "value": reading["value"]
+                            })
+                        emit('packet', {"packet_data": formatted_readings}, broadcast=True)
+                    #newData[sensor_name] = formatted_readings # Store in the newData w/ sensor name
+                  
+
+        @self.socketio.on('update')
+        def send_update(data):
+            # in system state, in the Sensor List, iterate through the sensors and return the timestamps and data
+            Sensor_List = self.state.get("Sensor List")
+            newData = {}
+            client_request = data.get("request")
+
+            if client_request == "home":
+                for sensor_id, sensor_data in Sensor_List.items():
+                    sensor_name = sensor_data["name"]  # Get the sensor name
+                    reading = sensor_data["current reading"]
+                    newData[sensor_name] = ({
+                        "time": reading["time"],
+                        "value": reading["value"]
+                    }) # Store in the newData w/ sensor name
+                emit('update_home', {"update_data": newData}, broadcast=True)
+            else:
+                for sensor_id, sensor_data in Sensor_List.items():
+                    if str(sensor_id) == client_request:
+                        sensor_name = sensor_data["name"]  # Get the sensor name
+                        reading = sensor_data["current reading"]
+                        emit('update', {"update_data": reading}, broadcast=True)
+
+        @self.socketio.on('disconnect')
+        def client_disconnect():
+            print("Client disconnected from WebSocket")
+            sid = request.sid
+            print(f"🔴 Client disconnected: {sid}")
+
+            # Remove client from set
+            if hasattr(client_connect, "clients"):
+                client_connect.clients.discard(sid)
+
+            print(f"Remaining clients: {len(client_connect.clients)}")
 
     # Method to run the app - used in main
     def run_app(self):
-        self.app.run(debug=False) 
+        self.socketio.run(self.app, debug=False) 
 
 
 # Code to run the app - without main

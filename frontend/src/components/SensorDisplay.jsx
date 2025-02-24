@@ -1,23 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend,
   LineElement, PointElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import ChangeRangeForm from "./ChangeRangeForm";
+import { WebSocketContext } from "./WebSocketProvider";
 
 // Register necessary components in Chart.js
 ChartJS.register(
   CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend, LineElement, PointElement
 );
 
-const SensorDisplay = ( inputSensor ) => {
-  // Initialize the state for chart data
+const SensorDisplay = ( inputSensor, tank) => {
+  let isFetching = false;
+  const socket = useContext(WebSocketContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [sensor, setSensor] = useState({});
+  const [sensor, setSensor] = useState(inputSensor);
   const [sensorValue, setSensorValue] = useState({});
   const [sensorData, setSensorData] = useState({
-    labels: [],
     datasets: [
       {
         label: 'Sensor Data',
@@ -30,57 +31,100 @@ const SensorDisplay = ( inputSensor ) => {
     ],
   });
 
+  // Web socket things
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Function to handle async fetch data packet and sensor data
+    const fetchData = async () => {
+      try {
+        // Fetch the packet data and await its completion
+        await fetchDataPacket();
+        const intervalId = setInterval(fetchSensorData, 1500);
+        return () => {
+          clearInterval(intervalId);
+          socket.off("response");
+        };
+      } catch (error) {
+        console.error("Error in fetchData:", error);
+      }
+    };
+    fetchData();
+  }, [socket]);
+
+  const fetchDataPacket = async () => {
+    return new Promise(async (resolve, reject) => {
+    if (isFetching) return; // Prevent multiple fetches at the same time
+    isFetching = true;
+    try {
+      const sensor = inputSensor.inputSensor
+      const sensor_id = sensor._id;
+      const packetData = await new Promise((resolve, reject) => {
+        socket.emit("packet", { request: sensor_id });
+        socket.once("packet", (data) => {
+          resolve(data); // Resolve promise when data is received
+        });
+      });
+      //const newLabels = packetData.packet_labels || [];
+      const newData = packetData.packet_data || [];
+
+      setSensorData((prevData) => {
+        return {
+          datasets: [{
+            ...prevData.datasets[0],
+            data: [
+              ...prevData.datasets[0].data,
+              ...newData.map((entry) => ({ x: entry.time, y: entry.value })) // Format the data as x and y
+            ],
+          }],
+        };
+      });
+      // Optional: Reject the promise if there is an error with the socket event
+      // setTimeout(() => reject(new Error('Timeout waiting for data')), 5000); // 5-second timeout
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    } finally {
+      isFetching = false; // Reset the flag once the fetch is complete
+      resolve();
+    }
+  });
+  };
+
   const fetchSensorData = async () => {
     try {
-        const response = await fetch("http://127.0.0.1:5000/current_sensor_data");
-            const data = await response.json();
-
-            // Format the sensors to extract the ID correctly
-            /*const formattedSensors = data.sensors.map(sensor => ({
-                ...sensor,
-                _id: sensor._id.$oid // Extract the ID as a string
-            }));
-            console.log(formattedSensors);
-            formatAndSortSensors(formattedSensors);*/
-            setSensorValue(data['current-measurement']);
-            
-            setSensorData((prevData) => {
-                const newLabels = [...prevData.labels];
-                const newData = [...prevData.datasets[0].data];
-          
-                // Add a new timestamp (current time) and a random data point
-                const newTime = new Date(); // Current time as label
-                const newValue = data['current-measurement'];
-          
-                newLabels.push(newTime);
-                newData.push(newValue);
-          
-                // Keep only the latest 10 data points to avoid overcrowding the chart
-                if (newLabels.length > 10) {
-                  newLabels.shift();
-                  newData.shift();
-                }
-          
-                return {
-                  labels: newLabels,
-                  datasets: [{ ...prevData.datasets[0], data: newData }],
-                };
-            });
-
+      const sensor = inputSensor.inputSensor
+      const sensor_id = sensor._id;
+      const updateData = await new Promise((resolve, reject) => {
+        socket.emit("update", { request: sensor_id });
+        socket.on("update", (data) => {
+          resolve(data); // Resolve promise when data is received
+        });
+      });
+      const newData = updateData.update_data;
+      setSensorData((prevData) => {
+        const holyData = [
+              ...prevData.datasets[0].data,
+              { x: newData.time, y: newData.value }
+            ];
+        // Keep only the latest 10 data points
+        if (holyData.length > 10) {
+          holyData.shift(); // Remove the oldest entry
+        }
+        return {
+          datasets: [{
+            ...prevData.datasets[0],
+            data: holyData,
+          }],
+        };
+      });
+      // Optional: Reject the promise if there is an error with the socket event
+      // setTimeout(() => reject(new Error('Timeout waiting for data')), 5000); // 5-second timeout
     } catch (error) {
         console.error('Error fetching data:', error);
     }
   };
 
-  // Update the chart data every second
-  useEffect(() => {
-    fetchSensorData();
-    const intervalId = setInterval(fetchSensorData, 3000);
-
-    // Cleanup the interval on component unmount
-    return () => clearInterval(intervalId);
-  }, []);
-
+  // My attempt to fix the weird lag server issue
   useEffect(() => {
     const timer = setTimeout(() => {
       console.log("Waited 2 seconds!");
@@ -102,7 +146,7 @@ const SensorDisplay = ( inputSensor ) => {
 
   const onUpdate = () => {
     closeModal()
-    fetchSensorData()
+    //fetchSensorData()
   }
 
   return (
@@ -126,11 +170,14 @@ const SensorDisplay = ( inputSensor ) => {
                                 x: {
                                 type: 'time',
                                 time: {
-                                    unit: 'second', // Set the time unit for the x-axis
+                                    unit: 'minute', // Set the time unit for the x-axis
+                                    stepSize: 100,     //100 minutes 
                                 },
+                                title: { display: true, text: 'Time' },
                                 },
                                 y: {
                                 beginAtZero: true, // Start the y-axis at zero
+                                title: { display: true, text: 'Value' },
                                 },
                             },
                             animation: false, // Disable animation for smoother updates

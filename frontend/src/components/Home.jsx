@@ -1,21 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import ConfigSensorsForm from "./ConfigSensorsForm";
-import AnalysisTool from "./AnalysisTool";
 import HomeDisplay from "./HomeDisplay";
 import SensorDisplay from "./SensorDisplay";
 import SlideToggle from './SlideToggle';
-import RealTimeChart from "./RealTimeChart";
+import WebSocketProvider from "./WebSocketProvider";
+import { io } from "socket.io-client";
 import "../home.css";
+
+const SOCKET_SERVER_URL = "http://localhost:5000";  // Flask WebSocket server
 
 function Home() {
   const [activeTab, setActiveTab] = useState('home');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [sensors, setSensors] = useState({});
 
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const socket = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
+
   useEffect(() => {
-    fetchSensors()
+    fetchSensors();
   }, []);
 
   const fetchSensors = async () => {
@@ -46,20 +51,13 @@ function Home() {
     setIsConfigOpen(true)
   };
 
-  const openAnalysisModal = () => {
-    if (isModalOpen) return
-    //setCurrentSensor(sensor)
-    setIsModalOpen(true)
-    setIsAnalysisOpen(true)
-  };
-
   const closeModal = () => {
     setIsModalOpen(false)
     setIsConfigOpen(false)
-    setIsAnalysisOpen(false)
   }
 
   return (
+    <WebSocketProvider>
     <div className="container">
       <nav className="tabs">
         <div
@@ -84,28 +82,25 @@ function Home() {
           <div className="tab-content home">
             <h2>Home Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
-            <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <HomeDisplay/>
+            <HomeDisplay socket={socket} />
           </div>
         )}
         {activeTab === 'tank1' && (
           <div className="tab-content tank1">
             <h2>Tank 1 Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
-            <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <SensorDisplay inputSensor={sensors[0]} />
-            <SensorDisplay inputSensor={sensors[1]} />
-            <SensorDisplay inputSensor={sensors[2]} />
+            <SensorDisplay inputSensor={sensors[0]} tank={1} />
+            <SensorDisplay inputSensor={sensors[1]} tank={1} />
+            <SensorDisplay inputSensor={sensors[2]} tank={1} />
           </div>
         )}
         {activeTab === 'tank2' && (
           <div className="tab-content tank2">
             <h2>Tank 2 Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
-            <button onClick={() => openAnalysisModal()}>AnalysisTool</button>
-            <SensorDisplay inputSensor={sensors[3]} />
-            <SensorDisplay inputSensor={sensors[4]} />
-            <SensorDisplay inputSensor={sensors[5]} />
+            <SensorDisplay inputSensor={sensors[3]} tank={2}/>
+            <SensorDisplay inputSensor={sensors[4]} tank={2}/>
+            <SensorDisplay inputSensor={sensors[5]} tank={2}/>
           </div>
         )}
         {isModalOpen && activeTab && isConfigOpen && (
@@ -117,17 +112,9 @@ function Home() {
             </div>
           </div>
         )}
-        {isModalOpen && activeTab && isAnalysisOpen && (
-          <div className="modal">
-            <div className="modal-content">
-              <span className="close" onClick={closeModal}>&times;</span>
-              <h3>Analysis Tool</h3>
-              <AnalysisTool/>
-            </div>
-          </div>
-        )}
       </section>
     </div>
+    </WebSocketProvider>
   );
 }
 
