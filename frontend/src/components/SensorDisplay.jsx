@@ -151,7 +151,7 @@ const SensorDisplay = ( inputSensor, tank) => {
 
   return (
     <div>
-      <h2>{sensor.type} Sensor Data</h2>
+      <h2>Sensor Data</h2>
       <table>
             <thead>
                 <tr>
@@ -161,7 +161,7 @@ const SensorDisplay = ( inputSensor, tank) => {
             </thead>
             <tbody>
                 <tr>
-                    <td>{sensorValue.currentMeasurement || 'Loading...'}</td>
+                    <td>{sensorValue.currentMeasurement || ''}</td>
                     <td>
                         <Line
                             data={sensorData}

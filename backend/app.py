@@ -7,12 +7,6 @@ from sys_state import Sys_State
 from datetime import datetime, timedelta
 from db_config import user_collection, sensor_collection, test_sensor_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection
 
-from db_config import Water1_collection, Air1_collection, Pressure1_collection, Water2_collection, Air2_collection, Pressure2_collection
-import time
-
-#sensor_measurement_array = [w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection]
-sensor_measurement_array = [Water1_collection, Air1_collection, Pressure1_collection, Water2_collection, Air2_collection, Pressure2_collection ]
-
 class Flask_App():
     # Shared with main
     system_state=None
@@ -103,14 +97,11 @@ class Flask_App():
             filters = request.json
             tankFilter = filters.get("selectedTank").strip()
             sensorFilter = filters.get("selectedSensor").strip()
-            #if filters.get("selectedTime").strip() == "0":
-            #    timeFilter = 0
-            #else:
-            #    timeFilter = int(time.time()) - ( int(filters.get("selectedTime").strip()) * 3600 )
-            timeFilter = datetime.now() - timedelta(minutes=1)
-            print("tank...", tankFilter, "...")
-            print("sensor...", sensorFilter, "...")
-            print("time...", timeFilter, "...")
+            startDateFilter = filters.get("formattedStart").strip()
+            endDateFilter = filters.get("formattedEnd").strip()
+
+            print(tankFilter, sensorFilter, startDateFilter, endDateFilter)
+
             # Use sensor_collection to find needed sensors from needed tanks
             ###### not sure, could also query both individually and compare cursors or something
 
@@ -137,26 +128,38 @@ class Flask_App():
             # Get the sensor IDs from the query result
             for sensor in sensor_ids_list:
                 sensor_ids.append(sensor['_id'])
-            print("sensor id ", sensor_ids)
-
-            # EXAMPLE - get last hour time: one_hour_ago = datetime.now() - timedelta(hours=1)
 
             # Query the measurements collections --- sensor_measurement_array would have to be from sys_state
-            result_data = []
-            for collection in sensor_measurement_array:
-                # LATER GRAB COLLECTION FROM SYS STATE
-                measurements_cursor = collection.find(
-                    {"sensor_id": {"$in": sensor_ids},  # Find any "sensor_id" $in sensor_ids
-                       "time": {"$gte": timeFilter}}  # Find timestamps >= ($gte) one_hour_ago
-                )
-                measurements_list = list(measurements_cursor)
-                if measurements_list:  # Check if the list is not empty
-                    result_data.append(measurements_list)
+            result_data = {}
+            Sensor_List = self.state.get("Sensor List")
+            for sensor in sensor_ids:
+                for sensor_id, sensor_data in Sensor_List.items():
+                    if sensor == sensor_id:
+                        collection = sensor_data["db"]
+                        if startDateFilter == "0" and endDateFilter == "0":
+                            tempDateFilter = datetime.strptime("2025-03-17T04:00:00.000Z", "%Y-%m-%dT%H:%M:%S.%fZ")
+                            measurements_cursor = collection.find({"time": {"$gte": tempDateFilter}})
+                        elif endDateFilter == "0":
+                            tempEndFilter = startDateFilter[:11] + "23:59:59.999Z"
+                            startDate = datetime.strptime(startDateFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
+                            tempEnd = datetime.strptime(tempEndFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
+                            measurements_cursor = collection.find({
+                                "time": {"$gte": startDate, "$lt": tempEnd}
+                            })
+                        else:
+                            startDate = datetime.strptime(startDateFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
+                            endDate = datetime.strptime(endDateFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
+                            measurements_cursor = collection.find({
+                                "time": {"$gte": startDate, "$lt": endDate}
+                            })
+                        measurements_list = list(measurements_cursor)
+                        if measurements_list:  # Check if the list is not empty
+                            result_data[sensor_data["name"]] = measurements_list
 
             # Convert documents to JSON format using bson's json_util
-            json_data = list(map(lambda x: json.loads(json_util.dumps(x)), result_data))
-
+            #json_data = list(map(lambda x: json.loads(json_util.dumps(x)), result_data))
             # Return the result data as a JSON response
+            json_data = json.loads(json_util.dumps(result_data))
             return jsonify({"sensor_data": json_data})
         
 

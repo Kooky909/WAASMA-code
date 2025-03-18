@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Line } from 'react-chartjs-2';
+import DatePicker from "react-datepicker";
 import { Chart as ChartJS, CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend,
     LineElement, PointElement, Filler } from 'chart.js';
 import './AnalysisTool.css';
+import "react-datepicker/dist/react-datepicker.css";
 
 // Register required Chart.js components
 ChartJS.register(CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend, Filler);
@@ -10,21 +12,28 @@ function Analysis() {
   let isFetching = false;
   const [selectedTank, setSelectedTank] = useState('');
   const [selectedSensor, setSelectedSensor] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
+  const [sensorData, setSensorData] = useState([]);
 
   useEffect(() => {
-    fetchFilteredData( "all", "all", "0")
+    setSelectedTank("all");
+    setSelectedSensor("all");
+    setStartDate("0");
+    setEndDate("0");
+    fetchFilteredData( "all", "all", "0", "0");
   }, []);
 
-  const fetchFilteredData = async (selectedTank, selectedSensor, selectedTime) => {
+  const fetchFilteredData = async (selectedTank, selectedSensor, formattedStart, formattedEnd) => {
     if (isFetching) return; // Prevent multiple fetches at the same time
     isFetching = true;
     try {
       const data = {
         selectedTank,
         selectedSensor,
-        selectedTime
+        formattedStart,
+        formattedEnd
       }
       console.log(data)
       const url = `http://127.0.0.1:5000/analysis_query/`;
@@ -38,11 +47,12 @@ function Analysis() {
       const response = await fetch(url, options)
       const sensorData = await response.json();
       const newData = sensorData.sensor_data;
+      setSensorData(newData);
       
       setChartData({
-        datasets: Object.keys(newData).map((sensor, index) => ({
-            label: `Sensor ${index + 1}`,
-            data: newData[sensor].map((entry) => { 
+        datasets: Object.keys(newData).map((sensorName, index) => ({
+            label: sensorName,
+            data: newData[sensorName].map((entry) => { 
               const timestamp = new Date(entry.time.$date).getTime();
               return {
                 x: timestamp, 
@@ -68,8 +78,55 @@ function Analysis() {
 
   const onSubmit = async (e) => {
     e.preventDefault()
-    fetchFilteredData(selectedTank, selectedSensor, selectedTime)
+    const formattedStart = startDate ? startDate.toISOString() : "0";
+    const formattedEnd = endDate ? endDate.toISOString() : "0";
+    fetchFilteredData(selectedTank, selectedSensor, formattedStart, formattedEnd)
   }
+
+  function convertToCSV(data) {
+    const header = Object.keys(data[0]).join(",");  // Extracts the header from the first object
+    const rows = data.map(item => Object.values(item).join(",")); // Maps data to CSV rows
+    
+    return [header, ...rows].join("\n"); // Combine the header with rows
+  }
+
+  const downloadCSV = () => {
+    /*if (!chartData || chartData.length === 0) {
+      alert("No data available to download.");
+      return;
+    }*/
+  
+    console.log(sensorData)
+    const flatData = [];
+    for (const [sensorName, readings] of Object.entries(sensorData)) {
+      readings.forEach(entry => {
+        const dateString = entry.time.$date;
+        const dateObj = new Date(dateString);
+        flatData.push({
+          sensor_name: sensorName,
+          time: dateObj.toISOString(),
+          value: entry.value
+        });
+      });
+    }
+
+    const csvContent = convertToCSV(flatData);
+ 
+    // Create Blob and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+  
+    if (link.download !== undefined) { // Check if the browser supports the download attribute
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', "sensor_data.csv");
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
 
   return (
     <div className="analysis-container"> 
@@ -82,34 +139,37 @@ function Analysis() {
           <div className="filter-item">
             <label htmlFor="tankSelect">Select Tanks:</label>
             <select id="tankSelect" value={selectedTank} onChange={(e) => setSelectedTank(e.target.value)}>
-              <option value="all">Select Tanks</option>
+              <option value="all">All Tanks</option>
               <option value="1">Tank 1</option>
               <option value="2">Tank 2</option>
-              <option value="all">All Tanks</option>
             </select>
           </div>
   
           <div className="filter-item">
             <label htmlFor="sensorSelect">Select Sensors:</label>
             <select id="sensorSelect" value={selectedSensor} onChange={(e) => setSelectedSensor(e.target.value)}>
-              <option value="all">Select Sensors</option>
+              <option value="all">All Sensors</option>
               <option value="Water">Water Quality</option>
               <option value="Air">Air Quality</option>
               <option value="Pressure">Pressure</option>
-              <option value="all">All Sensors</option>
             </select>
           </div>
   
           <div className="filter-item">
-            <label htmlFor="timeSelect">Select Time:</label>
-            <select id="timeSelect" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
-              <option value="0">Select Time</option>
-              <option value="1">Last Hour</option>
-              <option value="24">Last 24 Hours</option>
-              <option value="168">Last 7 Days</option>
-              <option value="336">Last 14 Days</option>
-              <option value="0">All Data</option>
-            </select>
+            <label htmlFor="timeSelect">Select Dates:</label>
+            <DatePicker
+              selected={startDate}
+              onChange={(dates) => {
+                const [start, end] = dates;
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              startDate={startDate}
+              endDate={endDate}
+              selectsRange
+              isClearable
+              placeholderText="Select a date range"
+            />
           </div>
   
           <button type="submit" className="apply-button">Apply Filters</button>
@@ -140,6 +200,7 @@ function Analysis() {
             animation: false,
           }}
         />
+        <button onClick={() => downloadCSV(chartData)} className="download-CSV">Download Data</button>
         <p>Ratio of CO2 in water to CO2 in air:</p>
       </div>
     </div>
