@@ -1,18 +1,17 @@
 import { useState } from "react";
 
-const ChangeSettingsForm = ({ settingChange = {}, currentValue, updateCallback }) => {
-    console.log(settingChange._id);
+const ChangeSettingsForm = ({ settingChange, currentValue, updateCallback }) => {
 
-    const [frequency, setFrequency] = useState(parseInt(currentValue, 10) || "");
+    const [read_frequency, setFrequency] = useState(parseInt(currentValue, 10) || "");
 
     const onSubmit = async (e) => {
         e.preventDefault()
 
         const data = {
-            frequency
+            read_frequency
         }
         console.log(data)
-        const url = `http://127.0.0.1:5000/change_setting/${settingChange._id}`;
+        const url = `http://127.0.0.1:5000/change_setting/${settingChange.$oid}`;
         const options = {
             method: "PATCH",
             headers: {
@@ -36,8 +35,8 @@ const ChangeSettingsForm = ({ settingChange = {}, currentValue, updateCallback }
                 <label htmlFor="frequency">Frequency:</label>
                 <input
                     type="text"
-                    id="frequency"
-                    value={frequency}
+                    id="read_frequency"
+                    value={read_frequency}
                     onChange={(e) => setFrequency(e.target.value)}
                 />
             </div>

@@ -12,12 +12,12 @@ ChartJS.register(
   CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend, LineElement, PointElement
 );
 
-const SensorDisplay = ( inputSensor, tank) => {
+const SensorDisplay = ( inputSensor ) => {
   let isFetching = false;
   const socket = useContext(WebSocketContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sensor, setSensor] = useState(inputSensor);
-  const [sensorValue, setSensorValue] = useState({});
+  const [sensorValue, setSensorValue] = useState();
   const [sensorData, setSensorData] = useState({
     datasets: [
       {
@@ -33,6 +33,7 @@ const SensorDisplay = ( inputSensor, tank) => {
 
   // Web socket things
   useEffect(() => {
+    setSensor(inputSensor);
     if (!socket) return;
     
     // Function to handle async fetch data packet and sensor data
@@ -74,7 +75,7 @@ const SensorDisplay = ( inputSensor, tank) => {
             ...prevData.datasets[0],
             data: [
               ...prevData.datasets[0].data,
-              ...newData.map((entry) => ({ x: entry.time, y: entry.value })) // Format the data as x and y
+              ...newData.map((entry) => ({ x: new Date(entry.time * 1000).toISOString(), y: entry.value })) // Format the data as x and y
             ],
           }],
         };
@@ -101,10 +102,11 @@ const SensorDisplay = ( inputSensor, tank) => {
         });
       });
       const newData = updateData.update_data;
+      setSensorValue(newData.value);
       setSensorData((prevData) => {
         const holyData = [
               ...prevData.datasets[0].data,
-              { x: newData.time, y: newData.value }
+              { x: new Date(newData.time * 1000).toISOString(), y: newData.value }
             ];
         // Keep only the latest 10 data points
         if (holyData.length > 10) {
@@ -127,9 +129,8 @@ const SensorDisplay = ( inputSensor, tank) => {
   // My attempt to fix the weird lag server issue
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log("Waited 2 seconds!");
       setSensor(inputSensor['inputSensor']);
-    }, 2000); // 2 seconds
+    }, 1);
 
     // Cleanup the timer on unmount
     return () => clearTimeout(timer);
@@ -151,54 +152,54 @@ const SensorDisplay = ( inputSensor, tank) => {
 
   return (
     <div>
-      <h2>Sensor Data</h2>
+      <h2>{sensor.name} Sensor Data</h2>
       <table>
-            <thead>
-                <tr>
-                    <th>Current Sensor Value  </th>
-                    <th>Data Graph  </th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>{sensorValue.currentMeasurement || ''}</td>
-                    <td>
-                        <Line
-                            data={sensorData}
-                            options={{
-                            scales: {
-                                x: {
-                                type: 'time',
-                                time: {
-                                    unit: 'minute', // Set the time unit for the x-axis
-                                    stepSize: 100,     //100 minutes 
-                                },
-                                title: { display: true, text: 'Time' },
-                                },
-                                y: {
-                                beginAtZero: true, // Start the y-axis at zero
-                                title: { display: true, text: 'Value' },
-                                },
-                            },
-                            animation: false, // Disable animation for smoother updates
-                            }}
-                            width={300}
-                            height={150}
-                        />
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <button onClick={() => openEditModal(sensor)}>Change Range</button>
-        {isModalOpen && (
-            <div className="modal">
-                <div className="modal-content">
-                    <span className="close" onClick={closeModal}>&times;</span>
-                    {/* Pass selectedSensor data to the form */}
-                    <ChangeRangeForm sensorChange={sensor} updateCallback={onUpdate} />
-                </div>
-            </div>
-        )}
+        <thead>
+          <tr>
+            <th>Current Value</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{sensorValue || "Loading..."}</td>
+            <td>
+              <Line
+                data={sensorData}
+                options={{
+                scales: {
+                  x: {
+                    type: 'time',
+                    time: {
+                      unit: 'minute', // Set the time unit for the x-axis
+                      stepSize: 100,     //100 minutes 
+                    },
+                    title: { display: true, text: 'Time' },
+                  },
+                  y: {
+                    beginAtZero: true, // Start the y-axis at zero
+                    title: { display: true, text: 'Value' },
+                  },
+                },
+                animation: false, // Disable animation for smoother updates
+              }}
+              width={300}
+              height={150}
+            />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <button onClick={() => openEditModal(sensor)}>Change Range</button>
+      {isModalOpen && (
+        <div className="modal">
+          <div className="modal-content">
+            <span className="close" onClick={closeModal}>&times;</span>
+            {/* Pass selectedSensor data to the form */}
+            <ChangeRangeForm sensorChange={sensor} updateCallback={onUpdate} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from sys_state import Sys_State
 from datetime import datetime, timedelta
-from db_config import user_collection, sensor_collection, test_sensor_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection
+from db_config import user_collection, sensor_collection, test_sensor_collection, settings_collection
 
 class Flask_App():
     # Shared with main
@@ -36,6 +36,15 @@ class Flask_App():
             # Convert documents to JSON format using bson's json_util
             json_sensors = list(map(lambda x: json.loads(json_util.dumps(x)), sensors_cursor))
             return jsonify({"sensors": json_sensors})
+        
+        # This route returns a list of the system settings from the settings collection
+        @self.app.route("/settings", methods=["GET"])
+        def get_settings():
+            settings_cursor = settings_collection.find()
+            # Convert documents to JSON format using bson's json_util
+            json_settings = list(map(lambda x: json.loads(json_util.dumps(x)), settings_cursor))
+            print(json_settings)
+            return jsonify({"settings": json_settings})
         
         # This route updates the sensor configuration collection ?????
         #@self.app.route("/config_sensors", methods=["POST"])
@@ -87,6 +96,20 @@ class Flask_App():
             test_sensor_collection.update_one(sensor_id, update)
 
             return jsonify({"message": "Sensor range updated."}), 200
+        
+        # This route updates the data read frequency in the settings collection
+        @self.app.route("/change_setting/<id>", methods=["PATCH"])
+        def change_setting(id):
+            print(id)
+            setting_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
+
+            data = request.json
+            print(data)
+            # Define the update operation
+            update = {"$set": data}  # Use $set to update the specified fields
+            settings_collection.update_one(setting_id, update)
+
+            return jsonify({"message": "Data frequency updated."}), 200
         
         ####################################################################
         #         ANALYSIS TOOL ROUTES

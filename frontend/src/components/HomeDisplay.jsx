@@ -45,7 +45,7 @@ const HomeDisplay = () => {
       setChartData({
         datasets: Object.keys(packetData).map((sensor, index) => ({
           label: `Sensor ${index + 1}`,
-          data: packetData[sensor].map((entry) => ({ x: entry.time, y: entry.value })), // Each sensor has its own timestamps
+          data: packetData[sensor].map((entry) => ({ x: new Date(entry.time * 1000).toISOString(), y: entry.value })), // Each sensor has its own timestamps
           borderColor: `hsl(${index * 60}, 70%, 50%, 0.7)`,
           backgroundColor: `hsl(${index * 60}, 70%, 80%, 0.7)`,
           fill: true,
@@ -76,7 +76,7 @@ const HomeDisplay = () => {
           const prevDataset = prevData?.datasets?.find((d) => d.label === `Sensor ${index + 1}`);
 
           // Preserve previous data and add new entries from the array
-          const newEntries = [updateData[sensor]].map(entry => ({ x: entry.time, y: entry.value }));
+          const newEntries = [updateData[sensor]].map(entry => ({ x: new Date(entry.time * 1000).toISOStrin, y: entry.value }));
 
           // Preserve previous data and add new point
           const newData = [...prevDataset.data, ...newEntries ];
@@ -113,7 +113,6 @@ const HomeDisplay = () => {
               title: { display: true, text: 'Time' },
               time: {
                 unit: 'minute', // Set the time unit for the x-axis
-                stepSize: 100,     //100 minutes 
               },
             },
             y: {

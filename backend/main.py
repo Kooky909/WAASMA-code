@@ -131,7 +131,7 @@ def sensor_proc(sensor_wrapper):
 
     # read sensor data
     while not system_state.get("terminate"):
-        current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time":time.time()}
+        current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time": datetime.now().timestamp()}
 
         system_state.hard_lock()
         sensor_wrapper["current reading"] = current_reading
