@@ -4,6 +4,7 @@ import './ConfigSensorsForm.css';
 const ConfigSensorsForm = ({ updateCallback }) => {
   const [numTanks, setNumTanks] = useState(2); // Default to 2 tanks
   const [sensorConfig, setSensorConfig] = useState([]); // Stores config for each sensor in each tank
+  const [errorMessage, setErrorMessage] = useState('');  // Error message state
 
   useEffect(() => {
     initializeSensorConfig(numTanks);
@@ -35,6 +36,18 @@ const ConfigSensorsForm = ({ updateCallback }) => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage(''); // Clears prev error messages
+
+    // Input Validation
+    for (let tankIndex = 0; tankIndex < numTanks; tankIndex++) {
+      const tankConfig = sensorConfig[tankIndex];
+      if (!tankConfig.water.coms || !tankConfig.water.low || !tankConfig.water.high ||
+          !tankConfig.pressure.coms || !tankConfig.pressure.low || !tankConfig.pressure.high ||
+          !tankConfig.air.coms || !tankConfig.air.low || !tankConfig.air.high) {
+        setErrorMessage("Please fill in all sensor configuration fields.");
+        return; // Stop submission if any field is empty
+      }
+    }
 
     // Prepare the data to send in the request
     const data = sensorConfig.map((tankConfig, tankIndex) => ({
@@ -71,12 +84,17 @@ const ConfigSensorsForm = ({ updateCallback }) => {
       body: JSON.stringify({ data })
     };
 
-    const response = await fetch(url, options);
-    if (response.status !== 201 && response.status !== 200) {
-      const data = await response.json();
-      alert(data.message);
-    } else {
+    try {
+      const response = await fetch(url, options);
+      if (response.status !== 201 && response.status !== 200) {
+        const responseData = await response.json();
+        setErrorMessage(responseData.message || "Failed to configure sensors."); // Needs backend message or generic error
+      } else {
       updateCallback(); // Callback function to update UI or state after success
+      }
+    } catch (error) {
+      setErrorMessage("An unexpected error occurred. Please try again.");
+      console.error("Config sensor error:", error);
     }
   };
 
@@ -206,6 +224,7 @@ const ConfigSensorsForm = ({ updateCallback }) => {
       ))}
       
       <button type="submit">Submit</button>
+      {errorMessage && <p style={{color: 'red'}}>{errorMessage}</p>}
     </form>
   );
 };

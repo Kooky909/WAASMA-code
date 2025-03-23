@@ -81,14 +81,24 @@ function Home() {
         {activeTab === 'home' && (
           <div className="tab-content home">
             <h2>Home Content</h2>
-            <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
+            <button 
+              onClick={() => openConfigSensorsModal()}
+              className="blue-button" // Added class
+            >
+              Configure Sensors
+            </button>
             <HomeDisplay socket={socket} />
           </div>
         )}
         {activeTab === 'tank1' && (
           <div className="tab-content tank1">
             <h2>Tank 1 Content</h2>
-            <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
+            <button 
+                onClick={() => openConfigSensorsModal()}
+                className="blue-button" // Added class
+              >
+                Configure Sensors
+              </button>
             <SensorDisplay inputSensor={sensors[0]} tank={1} />
             <SensorDisplay inputSensor={sensors[1]} tank={1} />
             <SensorDisplay inputSensor={sensors[2]} tank={1} />
@@ -97,7 +107,12 @@ function Home() {
         {activeTab === 'tank2' && (
           <div className="tab-content tank2">
             <h2>Tank 2 Content</h2>
-            <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
+            <button 
+                onClick={() => openConfigSensorsModal()}
+                className="blue-button" // Added class
+              >
+                Configure Sensors
+              </button>
             <SensorDisplay inputSensor={sensors[3]} tank={2}/>
             <SensorDisplay inputSensor={sensors[4]} tank={2}/>
             <SensorDisplay inputSensor={sensors[5]} tank={2}/>

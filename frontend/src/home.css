@@ -46,8 +46,8 @@
 .tab-content.home,
 .tab-content.tank1,
 .tab-content.tank2 {
-  padding: 20px; /* Add some padding around the content */
-  text-align: left; /* Left-align the text */
+  padding: 20px;
+  text-align: left;
 }
 
 .tab-content.home h2,
@@ -55,40 +55,42 @@
 .tab-content.tank2 h2 {
   font-size: 24px;
   color: black;
-  margin-bottom: 20px; /* Add some space below the heading */
+  margin-bottom: 20px;
 }
 
 .tab-content.home button,
 .tab-content.tank1 button,
 .tab-content.tank2 button {
-  background-color: #333; /* Set a background color for the buttons */
-  color: white; /* White text color */
+  background-color: #333;
+  color: white;
   border: none;
   padding: 10px 20px;
-  margin-right: 10px; /* Add space between buttons */
+  margin-right: 10px;
   cursor: pointer;
   font-size: 16px;
-  border-radius: 5px; /* Optional: round the corners */
+  border-radius: 5px;
 }
 
-.tab-content.home button:hover, 
+.tab-content.home button:hover,
 .tab-content.tank1 button:hover,
-.tab-content.tank2 button:hover{
-  background-color: #575757; /* Darken the button on hover */
+.tab-content.tank2 button:hover {
+  background-color: #575757;
 }
 
 .tab-content.home .RealTimeChart,
 .tab-content.tank1 .RealTimeChart,
 .tab-content.tank2 .RealTimeChart {
-  margin-top: 20px; /* Add space above the chart */
+  margin-top: 20px;
 }
+
 .menu-icon {
   font-size: 36px;
-  color:#333;
+  color: #333;
   cursor: pointer;
   display: inline-block;
   padding: 15px;
 }
+
 #menu-toggle {
   display: none;
 }
@@ -110,7 +112,6 @@
 .container {
   font-family: Arial, Helvetica, sans-serif;
   max-width: 1400px;
-  /*width: 80%;*/
   margin: 5px auto;
   background-color: #d0d9f0;
   padding: 20px;
@@ -139,7 +140,6 @@
   position: absolute;
   top: 47px;
   filter: blur(0.5px);
-  
 }
 
 .container nav label {
@@ -159,30 +159,31 @@
 #tank1:checked ~ nav label .home,
 #tank1:checked ~ nav label .tank1,
 #tank1:checked ~ nav label .tank2 {
-  color:#6F55CA;
+  color: #6f55ca;
 }
 
 .container nav .slider {
   position: absolute;
   height: 4.5px;
-  background-color: #6F55CA;
+  background-color: #6f55ca;
   border-radius: 20px;
   width: 33%;
-  z-index: 1 ;
+  z-index: 1;
   left: 0;
-  /*bottom: 0;*/
   top: 90%;
   transition: all 0.3s ease;
-  /*filter: blur(0px);*/
 }
+
 *:focus {
-  outline:none;
-}
-.container nav label:focus,
-.container nav.slider:focus {
   outline: none;
 }
-input[type='radio'] {
+
+.container nav label:focus,
+.container nav .slider:focus {
+  outline: none;
+}
+
+input[type="radio"] {
   display: none;
 }
 
@@ -199,15 +200,15 @@ input[type='radio'] {
 }
 
 #home:checked ~ nav .home {
-  color: #6F55CA;
+  color: #6f55ca;
 }
 
 #tank1:checked ~ nav .tank1 {
-  color: #6F55CA;
+  color: #6f55ca;
 }
 
 #tank2:checked ~ nav .tank2 {
-  color: #6F55CA;
+  color: #6f55ca;
 }
 
 section {
@@ -231,74 +232,12 @@ section .content .title {
 
 /* Modal Styles */
 .modal {
-  display: none; /* Hidden by default */
-  position: fixed; /* Stay in place */
-  z-index: 1000; /* Sit on top */
-  left: 0;
-  top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: auto; /* Enable scroll if needed */
-  background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
-}
-
-.modal-content {
-  background-color: #fefefe;
-  margin: 15% auto; /* 15% from the top and centered */
-  padding: 20px;
-  border: 1px solid #888;
-  width: 80%; /* Could be more or less, depending on screen size */
-  border-radius: 5px;
-}
-.tank-config {
-  margin-bottom: 20px;
-}
-
-.sensor-inputs {
-  display: flex;
-  gap: 15px;
-  margin-top: 10px;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  font-weight: normal;
-}
-
-.close {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.close:hover,
-.close:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-input[type="number"],
-input[type="text"] {
-  width: 100%;
-  padding: 8px;
-  margin: 8px 0;
-  box-sizing: border-box;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-/* Configure sensor styling*/
-/* Modal Styles */
-.modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Background overlay */
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -329,7 +268,7 @@ button {
   margin: 10px;
   padding: 10px 15px;
   border: none;
-  background-color: #007BFF;
+  background-color: #007bff;
   color: white;
   border-radius: 4px;
   cursor: pointer;
@@ -361,11 +300,10 @@ button {
 .sensor-input {
   width: 50px;
   padding: 5px;
-  display: none; /* Hidden initially */
+  display: none;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
-
 /* ANALYSIS TOOL STYLING*/
 /* Basic styling for modals */
 .modal {
