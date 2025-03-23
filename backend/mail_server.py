@@ -22,9 +22,12 @@ class mail_server:
 
 			self._connect_()
 			while len(self.outbox) > 0:
-				message = self.outbox.popleft()
-				self.server.sendmail(self.sender, message["reciever"], message["text"])
+				try:
+					message = self.outbox.popleft()
+					self.server.sendmail(self.sender, message["reciever"], message["text"])
+
 			self.server.quit()
+
 		return
 
 	def send_email(self, address, text):
