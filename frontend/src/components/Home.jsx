@@ -82,7 +82,12 @@ function Home() {
         {activeTab === 'home' && (
           <div className="tab-content home">
             <h2>Home Content</h2>
-            <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
+            <button 
+              onClick={() => openConfigSensorsModal()}
+              className="blue-button" // Added class
+            >
+              Configure Sensors
+            </button>
             <HomeDisplay socket={socket} />
           </div>
         )}
@@ -90,24 +95,18 @@ function Home() {
           <div className="tab-content tank1">
             <h2>Tank 1 Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
-            {sensors
-              .filter(sensor => sensor.tank === "1") // Filter by tank
-              .sort((a, b) => typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type)) // Sort by predefined order
-              .map((sensor, index) => (
-                <SensorDisplay key={index} inputSensor={sensor} tank={1} />
-              ))}
+            <SensorDisplay inputSensor={sensors[0]} tank={1} />
+            <SensorDisplay inputSensor={sensors[1]} tank={1} />
+            <SensorDisplay inputSensor={sensors[2]} tank={1} />
           </div>
         )}
         {activeTab === 'tank2' && (
           <div className="tab-content tank2">
             <h2>Tank 2 Content</h2>
             <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
-            {sensors
-              .filter(sensor => sensor.tank === "2") // Filter by tank
-              .sort((a, b) => typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type)) // Sort by predefined order
-              .map((sensor, index) => (
-                <SensorDisplay inputSensor={sensor} />
-              ))}
+            <SensorDisplay inputSensor={sensors[3]} tank={2}/>
+            <SensorDisplay inputSensor={sensors[4]} tank={2}/>
+            <SensorDisplay inputSensor={sensors[5]} tank={2}/>
           </div>
         )}
         {isModalOpen && activeTab && isConfigOpen && (

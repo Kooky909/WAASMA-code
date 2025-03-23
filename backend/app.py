@@ -1,50 +1,39 @@
-from flask import Flask, request, jsonify
-import json, random
+from flask import Flask, request, jsonify, abort
+import json
 from bson import json_util, ObjectId
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from sys_state import Sys_State
 from datetime import datetime, timedelta
-from db_config import user_collection, sensor_collection, test_sensor_collection, settings_collection
+from db_config import user_collection, sensor_collection, test_sensor_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection
 
 class Flask_App():
     # Shared with main
-    system_state=None
+    system_state = None
 
     # constructor
     def __init__(self, state) -> None:
-
         self.app = Flask(__name__)
         self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode='threading')
-        #, async_mode='eventlet'
-
-        # This is a pointer to the system state object in main
         self.state = state
-        #CORS(app)
-        # This allows the frontend and backend to connect
         CORS(self.app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
-        # This is a test route ------- should prob delete
-        @self.app.route('/')
-        def hello_world():
-            return 'Hello, World!'
+        def require_role(roles):
+            def decorator(f):
+                def decorated_function(*args, **kwargs):
+                    user_role = request.headers.get("Role")
+                    if user_role not in roles:
+                        abort(403)  # Forbidden
+                    return f(*args, **kwargs)
+                return decorated_function
+            return decorator
 
         # This route returns a list of sensors from the sensor collection
         @self.app.route("/sensors", methods=["GET"])
         def get_sensors():
             sensors_cursor = test_sensor_collection.find()
-            # Convert documents to JSON format using bson's json_util
             json_sensors = list(map(lambda x: json.loads(json_util.dumps(x)), sensors_cursor))
             return jsonify({"sensors": json_sensors})
-        
-        # This route returns a list of the system settings from the settings collection
-        @self.app.route("/settings", methods=["GET"])
-        def get_settings():
-            settings_cursor = settings_collection.find()
-            # Convert documents to JSON format using bson's json_util
-            json_settings = list(map(lambda x: json.loads(json_util.dumps(x)), settings_cursor))
-            print(json_settings)
-            return jsonify({"settings": json_settings})
         
         # This route updates the sensor configuration collection ?????
         #@self.app.route("/config_sensors", methods=["POST"])
@@ -62,57 +51,65 @@ class Flask_App():
         #    return jsonify({"message": "Sensors Configured!"}), 201
         
         @self.app.route("/config_sensors", methods=["PATCH"])
+        @require_role(["admin", "operator"])
         def config_sensors():
             data = request.json
             if not data:
-                return (
-                    jsonify({"message": "You must include all sensor data"}),
-                    400,
-                )   
+                return jsonify({"message": "You must include all sensor data"}), 400
             try:
-                # Define the update operation
                 update = {"$set": data}
-                # Update all users since no filter is provided
-                result = user_collection.update_many({}, update)
+                result = test_sensor_collection.update_many({}, update)
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
             return jsonify({"message": "Sensors Configured!"}), 201
 
         # This route updates a high/low range values for a sensor in the sensor collection
-        @self.app.route("/change_range/<id>", methods=["PATCH"])
-        def change_range(id):
-            print(id)
-            sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
+        @self.app.route("/change_range", methods=["PATCH"])
+        @require_role(["admin", "operator"])
+        def change_range():
+            data = request.json['data']
+            try:
+                for tank in data:
+                    tank_id = tank['tankId']
+                    for sensor in tank['sensors']:
+                        sensor_type = sensor['type']
+                        coms = sensor['coms']
+                        low = sensor['low']
+                        high = sensor['high']
+
+                        # Update sensor configuration based on tankId and sensor type
+                        filter_query = {"tank": f"Tank {tank_id}", "type": sensor_type}
+                        update_query = {"$set": {"coms": coms, "low": low, "high": high}}
+
+                        result = test_sensor_collection.update_one(filter_query, update_query)
+
+                        if result.matched_count == 0:
+                            return jsonify({"message": f"Sensor {sensor_type} in Tank {tank_id} not found."}), 404
+                return jsonify({"message": "Sensor ranges updated."}), 200
+            except Exception as e:
+                return jsonify({"message": str(e)}), 400
             
-            # Check if the sensor exists
-            existing_sensor = test_sensor_collection.find_one(sensor_id)
-            if not existing_sensor:
-                return jsonify({"message": "Sensor not found"}), 404
-
-            data = request.json
-            print(data)
-            # Define the update operation
-            update = {"$set": data}  # Use $set to update the specified fields
-            test_sensor_collection.update_one(sensor_id, update)
-
-            return jsonify({"message": "Sensor range updated."}), 200
-        
-        # This route updates the data read frequency in the settings collection
+        #updates the frequency setting in the database on the provided ID and JSON request.
         @self.app.route("/change_setting/<id>", methods=["PATCH"])
         def change_setting(id):
-            print(id)
-            setting_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
+            try:
+                data = request.json
+                frequency = data.get("frequency")
 
-            data = request.json
-            print(data)
-            # Define the update operation
-            update = {"$set": data}  # Use $set to update the specified fields
-            settings_collection.update_one(setting_id, update)
+                if frequency is None:
+                    return jsonify({"message": "Frequency is required"}), 400
 
-            return jsonify({"message": "Data frequency updated."}), 200
-        
+                # Assuming you have a collection to store settings
+                # and that you want to update the frequency field
+                setting_id = {"_id": ObjectId(id)}
+                update = {"$set": {"frequency": int(frequency)}}
+                result = test_sensor_collection.update_one(setting_id, update) #using test sensor collection as an example. change as needed.
+
+                return jsonify({"message": "Sensor range updated."}), 200
+            except Exception as e:
+                return jsonify({"message": str(e)}), 400
         ####################################################################
-        #         ANALYSIS TOOL ROUTES
+        #                        ANALYSIS TOOL ROUTES
         ####################################################################
 
         @self.app.route("/analysis_query/", methods=["POST"])
@@ -125,34 +122,18 @@ class Flask_App():
 
             print(tankFilter, sensorFilter, startDateFilter, endDateFilter)
 
-            # Use sensor_collection to find needed sensors from needed tanks
-            ###### not sure, could also query both individually and compare cursors or something
+            if tankFilter == "all" and sensorFilter == "all":
+                sensor_ids_cursor = test_sensor_collection.find({}, {"_id": 1})
+            elif tankFilter == "all":
+                sensor_ids_cursor = test_sensor_collection.find({"type": filters.get("selectedSensor")}, {"_id": 1})
+            elif sensorFilter == "all":
+                sensor_ids_cursor = test_sensor_collection.find({"tank": filters.get("selectedTank")}, {"_id": 1})
+            else:
+                sensor_ids_cursor = test_sensor_collection.find({"tank": filters.get("selectedTank"), "type": filters.get("selectedSensor")}, {"_id": 1})
 
-            if tankFilter == "all" and sensorFilter == "all":     # if all tanks and all sensors, grab everything
-                sensor_ids_cursor = test_sensor_collection.find({}, {"_id": 1})    # Only get the sensor ID
-            elif tankFilter == "all":     # if all tanks, only query sensors
-                sensor_ids_cursor = test_sensor_collection.find(
-                    {"type": filters.get("selectedSensor")},
-                    {"_id": 1}  # Only get the sensor ID
-                )
-            elif sensorFilter == "all":     # if all sensors, only query tanks
-                sensor_ids_cursor = test_sensor_collection.find(
-                    {"tank": filters.get("selectedTank")},
-                    {"_id": 1}  # Only get the sensor ID
-                )
-            else:      # if no all, query everything
-                sensor_ids_cursor = test_sensor_collection.find(
-                    {"tank": filters.get("selectedTank"), "type": filters.get("selectedSensor")},
-                    {"_id": 1}  # Only get the sensor ID
-                )
             sensor_ids_list = list(sensor_ids_cursor)
-            sensor_ids = []
+            sensor_ids = [sensor['_id'] for sensor in sensor_ids_list]
 
-            # Get the sensor IDs from the query result
-            for sensor in sensor_ids_list:
-                sensor_ids.append(sensor['_id'])
-
-            # Query the measurements collections --- sensor_measurement_array would have to be from sys_state
             result_data = {}
             Sensor_List = self.state.get("Sensor List")
             for sensor in sensor_ids:
@@ -166,73 +147,59 @@ class Flask_App():
                             tempEndFilter = startDateFilter[:11] + "23:59:59.999Z"
                             startDate = datetime.strptime(startDateFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
                             tempEnd = datetime.strptime(tempEndFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
-                            measurements_cursor = collection.find({
-                                "time": {"$gte": startDate, "$lt": tempEnd}
-                            })
+                            measurements_cursor = collection.find({"time": {"$gte": startDate, "$lt": tempEnd}})
                         else:
                             startDate = datetime.strptime(startDateFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
                             endDate = datetime.strptime(endDateFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
-                            measurements_cursor = collection.find({
-                                "time": {"$gte": startDate, "$lt": endDate}
-                            })
+                            measurements_cursor = collection.find({"time": {"$gte": startDate, "$lt": endDate}})
                         measurements_list = list(measurements_cursor)
-                        if measurements_list:  # Check if the list is not empty
+                        if measurements_list:
                             result_data[sensor_data["name"]] = measurements_list
 
-            # Convert documents to JSON format using bson's json_util
-            #json_data = list(map(lambda x: json.loads(json_util.dumps(x)), result_data))
-            # Return the result data as a JSON response
             json_data = json.loads(json_util.dumps(result_data))
             return jsonify({"sensor_data": json_data})
-        
 
         ####################################################################
-        #         USER PAGE ROUTES  -- talk to user colelction
+        #                        USER PAGE ROUTES -- talk to user collection
         ####################################################################
-        
-        # This route checks if the user entered the correct password
+
         @self.app.route("/user_authen/", methods=["POST"])
         def user_authen():
             credentials = request.json
             print(credentials.get("userEmail"))
-
-            # Query user by email
             user = user_collection.find_one({"email": credentials.get("userEmail")})
-            user["_id"] = str(user["_id"]) # Convert ObjectId to string
-
             if not user:
                 return {"success": False, "message": "User does not exist"}
-
-            # Check if password matches
+            user["_id"] = str(user["_id"])
             if user["password"] == credentials.get("userPassword"):
                 return {"success": True, "message": "Authentication successful", "user": user}
-                #return {"success": True, "message": "Authentication successful", "user": user}
             else:
                 return {"success": False, "message": "Invalid password"}
 
-        # This route returns a list of users
         @self.app.route("/users", methods=["GET"])
+        @require_role(["admin", "operator"])
         def get_users():
             users_cursor = user_collection.find()
-            # Convert documents to JSON format using bson's json_util
             json_users = list(map(lambda x: json.loads(json_util.dumps(x)), users_cursor))
             return jsonify({"users": json_users})
 
-        # This route creates a user
         @self.app.route("/create_user", methods=["POST"])
+        @require_role(["admin"])
         def create_user():
             data = request.json
-            if not data:
-                return ( jsonify({"message": "You must include a first name, last name and email"}), 400)
-        
-            try:
-                user_collection.insert_one(data)
-            except Exception as e:
-                return jsonify({"message": str(e)}), 400
+            user_role = request.headers.get("Role")
+            if user_role != "admin":
+                return jsonify({"message": "Unauthorized access"}), 403
+            username = data.get("username")
+            password = data.get("password")
+            role = data.get("role", "observer")
+            if not username or not password:
+                return jsonify({"message: Missing required fields"}), 400
+            if user_collection.find_one({"username": username}):
+                return jsonify({"message:" "User already exists"}), 400
+            user_collection.insert_one({"username": username, "password": password, "role": role})
+            return jsonify({"message": "User created successfully"}), 201
 
-            return jsonify({"message": "User created!"}), 201
-
-        # This route updates the data of a user
         @self.app.route("/update_user/<id>", methods=["PATCH"])
         def update_user(id):
             user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
@@ -251,10 +218,9 @@ class Flask_App():
 
         # This route deletes a user
         @self.app.route("/delete_user/<id>", methods=["DELETE"])
+        @require_role(["admin", "operator"])
         def delete_user(id):
-            user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
-            
-            # Check if the user exists
+            user_id = {"_id": ObjectId(id)}
             existing_user = user_collection.find_one(user_id)
             if not existing_user:
                 return jsonify({"message": "User not found"}), 404
@@ -264,20 +230,35 @@ class Flask_App():
         
         # This route returns the settings of a user
         @self.app.route("/user_settings/<id>", methods=["GET"])
+        @require_role(["admin", "operator"])
         def user_settings(id):
-            print(id)
-            user_id = {"_id": ObjectId(id)}  # Correctly format the user_id
-            
-            # Check if the user exists
+            user_id = {"_id": ObjectId(id)}
             existing_user = user_collection.find_one(user_id)
             if not existing_user:
                 return jsonify({"message": "User not found"}), 404
-            
-            # Convert ObjectId to string for JSON serialization
-            existing_user["_id"] = str(existing_user["_id"])
 
+            existing_user["_id"] = str(existing_user["_id"])
             return jsonify({"settings": existing_user}), 200
         
+        ####################################################################
+        #         USER ROLES
+        ####################################################################
+        # Commented out because it now exists above
+        # @self.app.route("/user_authen/", methods = ["POST"])
+        # def user_authen():
+        #     data = request.json
+        #     username = data.get("username")
+        #     password = data.get("password")
+
+        #     if not username or not password:
+        #         return jsonify({"success": False, "message": "Missing credentials"}), 400
+            
+        #     user = user_collection.find_one({"username": username})
+        #     if not user or user.get("password") != password:
+        #         return jsonify({"success": False, "message": "Invalid username or password"}), 401
+            
+        #     role = user.get("role", "observer")
+        #     return jsonify({"success": True, "message": "Login successful", "role": role}), 200
 
         #########################################
         #      WEB SOCKET STUFF

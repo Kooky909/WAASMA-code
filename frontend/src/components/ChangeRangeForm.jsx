@@ -1,36 +1,63 @@
 import { useState } from "react";
 
 const ChangeRangeForm = ({ sensorChange = {}, updateCallback }) => {
-    console.log(sensorChange._id);
+  const [range_low, setRangeLow] = useState(sensorChange.range_low || "");
+  const [range_high, setRangeHigh] = useState(sensorChange.range_high || "");
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
 
-    const [range_low, setRangeLow] = useState(sensorChange.range_low || "");
-    const [range_high, setRangeHigh] = useState(sensorChange.range_high || "");
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
 
-    const onSubmit = async (e) => {
-        e.preventDefault()
-
-        const data = {
-            range_low,
-            range_high
-        }
-        console.log(data)
-        console.log(sensorChange._id)
-        const url = `http://127.0.0.1:5000/change_range/${sensorChange._id}`;
-        const options = {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(data)
-        }
-        const response = await fetch(url, options)
-        if (response.status !== 201 && response.status !== 200) {
-            const data = await response.json()
-            alert(data.message)
-        } else {
-            updateCallback()
-        }
+    if (!range_low || !range_high) {
+      setMessage("Please fill in both range fields.");
+      setMessageType("error");
+      return;
     }
+
+    const data = {
+      data: [
+        {
+          tankId: sensorChange.tank, // Assuming sensorChange has tank info
+          sensors: [
+            {
+              type: sensorChange.type, // Assuming sensorChange has type info
+              coms: sensorChange.coms, // Assuming sensorChange has coms info
+              low: range_low,
+              high: range_high,
+            },
+          ],
+        },
+      ],
+    };
+
+    const url = "http://127.0.0.1:5000/change_range"; // Removed the :id, as backend doesn't use it
+    const options = {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    };
+
+    try {
+      const response = await fetch(url, options);
+      if (response.status !== 201 && response.status !== 200) {
+        const responseData = await response.json();
+        setMessage(responseData.message || "Failed to change range.");
+        setMessageType("error");
+      } else {
+        setMessage("Range successfully updated.");
+        setMessageType("success");
+        updateCallback();
+      }
+    } catch (error) {
+      setMessage("An unexpected error occurred. Please try again.");
+      setMessageType("error");
+      console.error("Change range error:", error);
+    }
+  };
 
 
     return (
@@ -54,6 +81,11 @@ const ChangeRangeForm = ({ sensorChange = {}, updateCallback }) => {
                 />
             </div>
             <button type="submit">{"Update"}</button>
+            {message && (
+                <p style = {{ color: messageType === "error" ? "red" : "green"}}>
+                    {message}
+                </p>
+            )}
         </form>
     );
 };
