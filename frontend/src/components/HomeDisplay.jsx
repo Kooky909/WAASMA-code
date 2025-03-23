@@ -103,7 +103,6 @@ const HomeDisplay = () => {
 
   return (
     <div>
-      <h2>Real-Time Sensor Data</h2>
       <Line
         data={chartData}
         options={{

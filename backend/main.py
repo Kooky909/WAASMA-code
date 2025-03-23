@@ -93,9 +93,9 @@ def main():
             system_state.set("New User Settings", False)
 
         # for testing purposes, ends after 10 seconds
-        time.sleep(5)
-        system_state.set("terminate", True)
-        print("time termination")
+        #time.sleep(5)
+        #system_state.set("terminate", True)
+        #print("time termination")
     # end main state while
 
     # Join all threads

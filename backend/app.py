@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify, abort
+from functools import wraps
 import json
 from bson import json_util, ObjectId
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from sys_state import Sys_State
 from datetime import datetime, timedelta
-from db_config import user_collection, sensor_collection, test_sensor_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection
+from db_config import user_collection, sensor_collection, test_sensor_collection, settings_collection
 
 class Flask_App():
     # Shared with main
@@ -15,11 +16,14 @@ class Flask_App():
     def __init__(self, state) -> None:
         self.app = Flask(__name__)
         self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode='threading')
-        self.state = state
-        CORS(self.app, resources={r"/*": {"origins": "http://localhost:5173"}})
+        #, async_mode='eventlet'
+        self.state = state # This is a pointer to the system state object in main
+        CORS(self.app, resources={r"/*": {"origins": "http://localhost:5173"}})  # This allows the frontend and backend to connect
 
+        # Implementation of user roles
         def require_role(roles):
             def decorator(f):
+                @wraps(f)  # Preserve function metadata
                 def decorated_function(*args, **kwargs):
                     user_role = request.headers.get("Role")
                     if user_role not in roles:
@@ -32,59 +36,53 @@ class Flask_App():
         @self.app.route("/sensors", methods=["GET"])
         def get_sensors():
             sensors_cursor = test_sensor_collection.find()
+            # Convert documents to JSON format using bson's json_util
             json_sensors = list(map(lambda x: json.loads(json_util.dumps(x)), sensors_cursor))
             return jsonify({"sensors": json_sensors})
         
-        # This route updates the sensor configuration collection ?????
-        #@self.app.route("/config_sensors", methods=["POST"])
-        #def config_sensors():
-        #    data = request.json
-        #    if not data:
-        #        return (
-        #            jsonify({"message": "You must include all sensor data"}),
-        #            400,
-        #        )   
-        #    try:
-        #        sensor_collection.insert_one(data)
-        #    except Exception as e:
-        #        return jsonify({"message": str(e)}), 400
-        #    return jsonify({"message": "Sensors Configured!"}), 201
+        # This route returns a list of the system settings from the settings collection
+        @self.app.route("/settings", methods=["GET"])
+        def get_settings():
+            settings_cursor = settings_collection.find()
+            # Convert documents to JSON format using bson's json_util
+            json_settings = list(map(lambda x: json.loads(json_util.dumps(x)), settings_cursor))
+            print(json_settings)
+            return jsonify({"settings": json_settings})
         
         @self.app.route("/config_sensors", methods=["PATCH"])
-        @require_role(["admin", "operator"])
+        #@require_role(["admin", "operator"])
         def config_sensors():
             data = request.json
             if not data:
                 return jsonify({"message": "You must include all sensor data"}), 400
             try:
+                ### Is this right? make sure this is right
                 update = {"$set": data}
                 result = test_sensor_collection.update_many({}, update)
+                print(data)
+                # make sensor config additions
+                # change system state to running
+                settings_collection.update_one(
+                    {},  # Empty query to target the first (and only) document
+                    {'$set': {'system_state': 'running'}}  # Set 'system_state' to 'running'
+                )
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
             return jsonify({"message": "Sensors Configured!"}), 201
 
         # This route updates a high/low range values for a sensor in the sensor collection
-        @self.app.route("/change_range", methods=["PATCH"])
+        @self.app.route("/change_range/<id>", methods=["PATCH"])
         @require_role(["admin", "operator"])
-        def change_range():
-            data = request.json['data']
+        def change_range(id):
+            sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
+            existing_sensor = test_sensor_collection.find_one(sensor_id) # Check if the sensor exists
+            if not existing_sensor:
+                return jsonify({"message": "Sensor not found"}), 404
+
+            data = request.json
             try:
-                for tank in data:
-                    tank_id = tank['tankId']
-                    for sensor in tank['sensors']:
-                        sensor_type = sensor['type']
-                        coms = sensor['coms']
-                        low = sensor['low']
-                        high = sensor['high']
-
-                        # Update sensor configuration based on tankId and sensor type
-                        filter_query = {"tank": f"Tank {tank_id}", "type": sensor_type}
-                        update_query = {"$set": {"coms": coms, "low": low, "high": high}}
-
-                        result = test_sensor_collection.update_one(filter_query, update_query)
-
-                        if result.matched_count == 0:
-                            return jsonify({"message": f"Sensor {sensor_type} in Tank {tank_id} not found."}), 404
+                update = {"$set": data}  # Use $set to update the specified fields
+                test_sensor_collection.update_one(sensor_id, update)
                 return jsonify({"message": "Sensor ranges updated."}), 200
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
@@ -93,7 +91,7 @@ class Flask_App():
         @self.app.route("/change_setting/<id>", methods=["PATCH"])
         def change_setting(id):
             try:
-                data = request.json
+                data = request.json   ###### IS THIS RIGHT???
                 frequency = data.get("frequency")
 
                 if frequency is None:
@@ -108,6 +106,8 @@ class Flask_App():
                 return jsonify({"message": "Sensor range updated."}), 200
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
+            
+
         ####################################################################
         #                        ANALYSIS TOOL ROUTES
         ####################################################################
@@ -176,6 +176,7 @@ class Flask_App():
             else:
                 return {"success": False, "message": "Invalid password"}
 
+        # This route returns a list of users from users collection
         @self.app.route("/users", methods=["GET"])
         @require_role(["admin", "operator"])
         def get_users():

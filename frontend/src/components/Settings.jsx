@@ -8,6 +8,7 @@ function Settings() {
 
   const [readFrequency, setReadFrequency] = useState("");
   const [readFrequencyId, setReadFrequencyId] = useState("");
+  const [systemState, setSystemState] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentValue, setCurrentValue] = useState({})
 
@@ -20,6 +21,7 @@ function Settings() {
     const data = await response.json();
     setReadFrequency(data.settings[0].read_frequency);
     setReadFrequencyId(data.settings[0]._id);
+    setSystemState(data.settings[0].system_state)
   };
 
   const closeModal = () => {
@@ -53,6 +55,10 @@ function Settings() {
                     Update
                 </button>
                 </td>
+              </tr>
+              <tr>
+                <td> Current System State: </td>
+                <td>{systemState}</td>
               </tr>
               
             </tbody>

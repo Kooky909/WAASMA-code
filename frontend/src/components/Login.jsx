@@ -46,7 +46,7 @@ function Login() {
 
                   // Navigate based on the role
                   if (result.user.role === "admin") {
-                      navigate("/admin-dashboard");
+                      navigate("/Home");
                   } else if (result.user.role === "operator") {
                       navigate("/operator-dashboard");
                   } else if (result.user.role === "observer") {

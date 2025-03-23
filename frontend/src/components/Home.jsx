@@ -13,6 +13,8 @@ function Home() {
   const [activeTab, setActiveTab] = useState('home');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [systemState, setSystemState] = useState(""); 
+  const [place, setPlace] = useState(null);
   const [sensors, setSensors] = useState({});
   const typeOrder = ["Water", "Air", "Pressure"]; // Define the order
 
@@ -22,6 +24,7 @@ function Home() {
 
   useEffect(() => {
     fetchSensors();
+    fetchSystemState();
   }, []);
 
   const fetchSensors = async () => {
@@ -37,89 +40,78 @@ function Home() {
     setSensors(formattedSensors);
   };
 
-  const onUpdate = () => {
-    closeModal()
-    fetchSensors()
-  }
+  const fetchSystemState = async () => {
+    const response = await fetch("http://127.0.0.1:5000/settings");
+    const data = await response.json();
+    setSystemState(data.settings[0].system_state)
+  };
+
+  const handleFormSubmit = async () => {
+    // Fetch or trigger a function to refresh data after form submission
+    // You can re-fetch the data here or perform any other necessary action
+    fetchSystemState();
+  };
   
   const changeTab = (tab) => {
     setActiveTab(tab);
   };
 
-  const openConfigSensorsModal = () => {
-    if (isModalOpen) return
-    setIsModalOpen(true)
-    setIsConfigOpen(true)
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false)
-    setIsConfigOpen(false)
-  }
-
   return (
     <WebSocketProvider>
-    <div className="container">
-      <nav className="tabs">
-        <div
-          className={`tab ${activeTab === 'home' ? 'active' : ''}`}
-          onClick={() => changeTab('home')} >
-          Home
-        </div>
-        <div
-          className={`tab ${activeTab === 'tank1' ? 'active' : ''}`}
-          onClick={() => changeTab('tank1')}>
-          Tank 1
-        </div>
-        <div
-          className={`tab ${activeTab === 'tank2' ? 'active' : ''}`}
-          onClick={() => changeTab('tank2')}>
-          Tank 2
-        </div>
-      </nav>
+      {systemState === "waiting" ? (
+          <ConfigSensorsForm onFormSubmit={handleFormSubmit} />
+        ) : (
+        <div className="container">
+        <nav className="tabs">
+          <div
+            className={`tab ${activeTab === 'home' ? 'active' : ''}`}
+            onClick={() => changeTab('home')} >
+            Home
+          </div>
+          <div
+            className={`tab ${activeTab === 'tank1' ? 'active' : ''}`}
+            onClick={() => changeTab('tank1')}>
+            Tank 1
+          </div>
+          <div
+            className={`tab ${activeTab === 'tank2' ? 'active' : ''}`}
+            onClick={() => changeTab('tank2')}>
+            Tank 2
+          </div>
+        </nav>
 
-      <section>
-        {activeTab === 'home' && (
-          <div className="tab-content home">
-            <h2>Home Content</h2>
-            <button 
-              onClick={() => openConfigSensorsModal()}
-              className="blue-button" // Added class
-            >
-              Configure Sensors
-            </button>
-            <HomeDisplay socket={socket} />
-          </div>
-        )}
-        {activeTab === 'tank1' && (
-          <div className="tab-content tank1">
-            <h2>Tank 1 Content</h2>
-            <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
-            <SensorDisplay inputSensor={sensors[0]} tank={1} />
-            <SensorDisplay inputSensor={sensors[1]} tank={1} />
-            <SensorDisplay inputSensor={sensors[2]} tank={1} />
-          </div>
-        )}
-        {activeTab === 'tank2' && (
-          <div className="tab-content tank2">
-            <h2>Tank 2 Content</h2>
-            <button onClick={() => openConfigSensorsModal()}>Configure Sensors</button>
-            <SensorDisplay inputSensor={sensors[3]} tank={2}/>
-            <SensorDisplay inputSensor={sensors[4]} tank={2}/>
-            <SensorDisplay inputSensor={sensors[5]} tank={2}/>
-          </div>
-        )}
-        {isModalOpen && activeTab && isConfigOpen && (
-          <div className="modal">
-            <div className="modal-content">
-              <span className="close" onClick={closeModal}>&times;</span>
-              <h3>Configure Sensors</h3>
-              <ConfigSensorsForm updateCallback={onUpdate} />
+        <section>
+          {activeTab === 'home' && (
+            <div className="tab-content home">
+              <h2>Home Content</h2>
+              <HomeDisplay socket={socket} />
             </div>
-          </div>
-        )}
-      </section>
-    </div>
+          )}
+          {activeTab === 'tank1' && (
+            <div className="tab-content tank1">
+              <h2>Tank 1 Content</h2>
+              {sensors
+                .filter(sensor => sensor.tank === "1") // Filter by tank
+                .sort((a, b) => typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type)) // Sort by predefined order
+                .map((sensor, index) => (
+                  <SensorDisplay inputSensor={sensor} />
+                ))}
+            </div>
+          )}
+          {activeTab === 'tank2' && (
+            <div className="tab-content tank2">
+              <h2>Tank 2 Content</h2>
+              {sensors
+                .filter(sensor => sensor.tank === "2") // Filter by tank
+                .sort((a, b) => typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type)) // Sort by predefined order
+                .map((sensor, index) => (
+                  <SensorDisplay inputSensor={sensor} />
+                ))}
+            </div>
+          )}
+        </section>
+        </div>
+      )}
     </WebSocketProvider>
   );
 }

@@ -17,22 +17,11 @@ const ChangeRangeForm = ({ sensorChange = {}, updateCallback }) => {
     }
 
     const data = {
-      data: [
-        {
-          tankId: sensorChange.tank, // Assuming sensorChange has tank info
-          sensors: [
-            {
-              type: sensorChange.type, // Assuming sensorChange has type info
-              coms: sensorChange.coms, // Assuming sensorChange has coms info
-              low: range_low,
-              high: range_high,
-            },
-          ],
-        },
-      ],
-    };
+      range_low,
+      range_high
+    }
 
-    const url = "http://127.0.0.1:5000/change_range"; // Removed the :id, as backend doesn't use it
+    const url = `http://127.0.0.1:5000/change_range/${sensorChange._id}`;
     const options = {
       method: "PATCH",
       headers: {

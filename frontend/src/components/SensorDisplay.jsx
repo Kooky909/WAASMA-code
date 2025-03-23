@@ -147,8 +147,20 @@ const SensorDisplay = ( inputSensor ) => {
 
   const onUpdate = () => {
     closeModal()
-    //fetchSensorData()
+    fetchSensor()
   }
+
+  const fetchSensor = async () => {
+    const response = await fetch("http://127.0.0.1:5000/sensors");
+    const data = await response.json();
+
+    // Format the sensors to extract the ID correctly
+    const formattedSensors = data.sensors.map(sensor => ({
+        ...sensor,
+        _id: sensor._id.$oid // Extract the ID as a string
+    }));
+    setSensor(formattedSensors.find(newSensor => newSensor._id === sensor._id));
+  };
 
   return (
     <div>

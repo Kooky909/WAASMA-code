@@ -1,26 +1,33 @@
 import { useState, useEffect } from "react";
 import './ConfigSensorsForm.css';
 
-const ConfigSensorsForm = ({ updateCallback }) => {
-  const [numTanks, setNumTanks] = useState(2); // Default to 2 tanks
-  const [sensorConfig, setSensorConfig] = useState([]); // Stores config for each sensor in each tank
+const ConfigSensorsForm = ({ onFormSubmit }) => {
+  const [numTanks, setNumTanks] = useState(0);
+  const [numSensors, setNumSensors] = useState(0);
+  const [sensorData, setSensorData] = useState([]); // Stores config for each sensor in each tank
   const [errorMessage, setErrorMessage] = useState('');  // Error message state
 
   useEffect(() => {
-    initializeSensorConfig(numTanks);
-  }, [numTanks]);
+    initializeSensorData(numTanks, numSensors);
+  }, [numTanks, numSensors]);
 
-  // Initialize sensor config for the number of tanks
-  const initializeSensorConfig = (numTanks) => {
-    const newConfig = [];
+  // Initialize sensor config for the number of tanks and sensors
+  const initializeSensorData = (numTanks, numSensors) => {
+    const newData = [];
     for (let i = 0; i < numTanks; i++) {
-      newConfig.push({
-        water: { coms: "", low: "", high: "" },
-        pressure: { coms: "", low: "", high: "" },
-        air: { coms: "", low: "", high: "" }
-      });
+      const tankSensors = [];
+      for (let j = 0; j < numSensors; j++) {
+        tankSensors.push({
+          name: "",
+          type: "water",  // Default type
+          coms: "",
+          low: "",
+          high: ""
+        });
+      }
+      newData.push(tankSensors);
     }
-    setSensorConfig(newConfig);
+    setSensorData(newData);
   };
 
   const handleNumTanksChange = (e) => {
@@ -28,18 +35,23 @@ const ConfigSensorsForm = ({ updateCallback }) => {
     setNumTanks(newNumTanks);
   };
 
+  const handleNumSensorsChange = (e) => {
+    const newNumSensors = parseInt(e.target.value);
+    setNumSensors(newNumSensors);
+  };
+
   const handleInputChange = (tankIndex, sensorType, field, value) => {
-    const updatedConfig = [...sensorConfig];
-    updatedConfig[tankIndex][sensorType][field] = value;
-    setSensorConfig(updatedConfig);
+    const updatedSensorData = [...sensorData];
+    updatedSensorData[tankIndex][sensorType][field] = value;
+    setSensorData(updatedSensorData);
   };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage(''); // Clears prev error messages
 
-    // Input Validation
-    for (let tankIndex = 0; tankIndex < numTanks; tankIndex++) {
+    // Input Validation ---- IS THIS RIGHT
+    /*for (let tankIndex = 0; tankIndex < numTanks; tankIndex++) {
       const tankConfig = sensorConfig[tankIndex];
       if (!tankConfig.water.coms || !tankConfig.water.low || !tankConfig.water.high ||
           !tankConfig.pressure.coms || !tankConfig.pressure.low || !tankConfig.pressure.high ||
@@ -47,35 +59,21 @@ const ConfigSensorsForm = ({ updateCallback }) => {
         setErrorMessage("Please fill in all sensor configuration fields.");
         return; // Stop submission if any field is empty
       }
-    }
+    }*/
 
     // Prepare the data to send in the request
-    const data = sensorConfig.map((tankConfig, tankIndex) => ({
-      tankId: tankIndex + 1,
-      sensors: [
-        {
-          type: "water",
-          coms: tankConfig.water.coms,
-          low: tankConfig.water.low,
-          high: tankConfig.water.high
-        },
-        {
-          type: "pressure",
-          coms: tankConfig.pressure.coms,
-          low: tankConfig.pressure.low,
-          high: tankConfig.pressure.high
-        },
-        {
-          type: "air",
-          coms: tankConfig.air.coms,
-          low: tankConfig.air.low,
-          high: tankConfig.air.high
-        }
-      ]
+    const data = sensorData.map((tankConfig, tankIndex) => ({
+      tank: tankIndex + 1,  // For example, tank 1, tank 2, etc.
+      sensors: tankConfig.map(sensor => ({
+        name: sensor.name,
+        type: sensor.type,  // e.g., 'water'
+        coms: sensor.coms,  // Communication port or identifier
+        low: sensor.low,    // Low range value
+        high: sensor.high   // High range value
+      }))
     }));
 
-    // Assuming an endpoint that accepts the sensor configuration
-    const url = `http://127.0.0.1:5000/change_range`;
+    const url = `http://127.0.0.1:5000/config_sensors`;
     const options = {
       method: "PATCH",
       headers: {
@@ -90,7 +88,7 @@ const ConfigSensorsForm = ({ updateCallback }) => {
         const responseData = await response.json();
         setErrorMessage(responseData.message || "Failed to configure sensors."); // Needs backend message or generic error
       } else {
-      updateCallback(); // Callback function to update UI or state after success
+      onFormSubmit(); // Callback function to update UI or state after success
       }
     } catch (error) {
       setErrorMessage("An unexpected error occurred. Please try again.");
@@ -101,6 +99,12 @@ const ConfigSensorsForm = ({ updateCallback }) => {
   return (
     <form onSubmit={onSubmit} className="config-sensor-form">
       <div>
+          <h2> Configure Sensors </h2>
+          <p> You must configure sensors to begin system run.</p>
+      </div>
+      <br />
+
+      <div>
         <label htmlFor="numTanks">Enter number of desired tanks:</label>
         <input
           type="number"
@@ -108,7 +112,21 @@ const ConfigSensorsForm = ({ updateCallback }) => {
           value={numTanks}
           onChange={handleNumTanksChange}
           min="1"
-          max="5"
+          max="2"
+          required
+        />
+      </div>
+      <br />
+
+      <div>
+        <label htmlFor="numSensors">Enter number of sensors per tank:</label>
+        <input
+          type="number"
+          id="numSensors"
+          value={numSensors}
+          onChange={handleNumSensorsChange}
+          min="1"
+          max="3"
           required
         />
       </div>
@@ -119,112 +137,82 @@ const ConfigSensorsForm = ({ updateCallback }) => {
         <div className="tank-config" key={tankIndex}>
           <h3>{`Tank ${tankIndex + 1}`}</h3>
 
-          {/* Water sensor configuration */}
-          <div className="sensor-inputs">
-            <h4>Water Sensor</h4>
-            <label htmlFor={`coms-${tankIndex}-water`}>Communication:</label>
-            <input
-              type="text"
-              id={`coms-${tankIndex}-water`}
-              value={sensorConfig[tankIndex]?.water.coms || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "water", "coms", e.target.value)
-              }
-            />
-            <br />
-            <label htmlFor={`low-${tankIndex}-water`}>Range - Low:</label>
-            <input
-              type="number"
-              id={`low-${tankIndex}-water`}
-              value={sensorConfig[tankIndex]?.water.low || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "water", "low", e.target.value)
-              }
-            />
-            <br />
-            <label htmlFor={`high-${tankIndex}-water`}>Range - High:</label>
-            <input
-              type="number"
-              id={`high-${tankIndex}-water`}
-              value={sensorConfig[tankIndex]?.water.high || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "water", "high", e.target.value)
-              }
-            />
-          </div>
+          {[...Array(numSensors)].map((_, sensorIndex) => (
+            <div className="sensor-config" key={sensorIndex}>
+              {/* Sensor configuration fields*/}
 
-          {/* Pressure sensor configuration */}
-          <div className="sensor-inputs">
-            <h4>Pressure Sensor</h4>
-            <label htmlFor={`coms-${tankIndex}-pressure`}>Communication:</label>
-            <input
-              type="text"
-              id={`coms-${tankIndex}-pressure`}
-              value={sensorConfig[tankIndex]?.pressure.coms || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "pressure", "coms", e.target.value)
-              }
-            />
-            <br />
-            <label htmlFor={`low-${tankIndex}-pressure`}>Range - Low:</label>
-            <input
-              type="number"
-              id={`low-${tankIndex}-pressure`}
-              value={sensorConfig[tankIndex]?.pressure.low || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "pressure", "low", e.target.value)
-              }
-            />
-            <br />
-            <label htmlFor={`high-${tankIndex}-pressure`}>Range - High:</label>
-            <input
-              type="number"
-              id={`high-${tankIndex}-pressure`}
-              value={sensorConfig[tankIndex]?.pressure.high || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "pressure", "high", e.target.value)
-              }
-            />
-          </div>
+              <table>
+                <tr>
+                  <h4>{`Sensor ${sensorIndex + 1}`}</h4>
+                </tr>
+                <tr>
+                  <td><label htmlFor={`name-${tankIndex}-${sensorIndex}`}> Sensor Name:</label></td>
+                  <td><input
+                    type="text"
+                    id={`name-${tankIndex}-${sensorIndex}`}
+                    value={sensorData[tankIndex]?.[sensorIndex]?.name || ""}
+                    onChange={(e) =>
+                      handleInputChange(tankIndex, sensorIndex, "name", e.target.value)
+                    }
+                  />
+                  </td>
+                </tr>
 
-          {/* Air sensor configuration */}
-          <div className="sensor-inputs">
-            <h4>Air Sensor</h4>
-            <label htmlFor={`coms-${tankIndex}-air`}>Communication:</label>
-            <input
-              type="text"
-              id={`coms-${tankIndex}-air`}
-              value={sensorConfig[tankIndex]?.air.coms || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "air", "coms", e.target.value)
-              }
-            />
-            <br />
-            <label htmlFor={`low-${tankIndex}-air`}>Range - Low:</label>
-            <input
-              type="number"
-              id={`low-${tankIndex}-air`}
-              value={sensorConfig[tankIndex]?.air.low || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "air", "low", e.target.value)
-              }
-            />
-            <br />
-            <label htmlFor={`high-${tankIndex}-air`}>Range - High:</label>
-            <input
-              type="number"
-              id={`high-${tankIndex}-air`}
-              value={sensorConfig[tankIndex]?.air.high || ""}
-              onChange={(e) =>
-                handleInputChange(tankIndex, "air", "high", e.target.value)
-              }
-            />
+                <tr>
+                  <td><label htmlFor={`type-${tankIndex}-${sensorIndex}`}>Sensor Type:</label></td>
+                  <td> <select id={`type-${tankIndex}-${sensorIndex}`}
+                  value={sensorData[tankIndex]?.[sensorIndex]?.type}
+                  onChange={(e) =>
+                    handleInputChange(tankIndex, sensorIndex, "type", e.target.value)
+                  }>
+                  <option value="water">Water</option>
+                  <option value="air">Air</option>
+                  <option value="pressure">Pressure</option>
+                  </select>
+                  </td>
+                </tr>
+
+                <tr>
+                    <td><label htmlFor={`coms-${tankIndex}-${sensorIndex}`}>Communication:</label></td>
+                    <td>  <input
+                type="text"
+                id={`coms-${tankIndex}-${sensorIndex}`}
+                value={sensorData[tankIndex]?.[sensorIndex]?.coms || ""}
+                onChange={(e) =>
+                  handleInputChange(tankIndex, sensorIndex, "coms", e.target.value)
+                }
+                /></td>
+                </tr>
+
+                <tr>
+                  <td><label htmlFor={`low-${tankIndex}-${sensorIndex}`}>Range - Low:</label></td>
+                  <td><input
+                type="number"
+                id={`low-${tankIndex}-${sensorIndex}`}
+                value={sensorData[tankIndex]?.[sensorIndex]?.low || ""}
+                onChange={(e) =>
+                  handleInputChange(tankIndex, sensorIndex, "low", e.target.value)
+                }
+                /></td>
+                </tr>
+
+                <tr>
+                  <td><label htmlFor={`high-${tankIndex}-${sensorIndex}`}>Range - High:</label></td>
+                  <td><input
+                  type="number"
+                  id={`high-${tankIndex}-${sensorIndex}`}
+                  value={sensorData[tankIndex]?.[sensorIndex]?.high || ""}
+                  onChange={(e) =>
+                    handleInputChange(tankIndex, sensorIndex, "high", e.target.value)
+                  }
+                /></td>
+                </tr>
+              </table>
+            </div>
+          ))}
           </div>
-        </div>
       ))}
-      
       <button type="submit">Submit</button>
-      {errorMessage && <p style={{color: 'red'}}>{errorMessage}</p>}
     </form>
   );
 };
