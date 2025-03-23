@@ -25,11 +25,10 @@ system_state = Sys_State({
     "Mail Server": None
 })
 
-
 def main():
     # initialize app
     app_thread = threading.Thread(target=app_init, args=[system_state])
-    # app_thread.start()
+    app_thread.start()
 
     # initialize mail server
     mail_thread = threading.Thread(target=mail_init, args=[system_state])
@@ -45,7 +44,6 @@ def main():
 
     # Loops until six sensors are added
     while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 3:
-
         sensor_config = test_sensor_collection.find()
 
         # This loops through all the sensors, the while is not needed?
@@ -166,17 +164,25 @@ def sensor_proc(sensor_wrapper):
             sensor_wrapper["db"].insert_one({"value": current_reading["value"], "time": datetime.now(), "sensor_id": sensor_wrapper["id"]})
         except Exception as err:
             print("Error in sensor reading for " + sensor_wrapper["name"])
-            print("\n" + err)
+            print("\n" + str(err))
 
         system_state.hard_release()
 
         time.sleep(1.5)
 
 def notification(sensor):
-    print("Sensor value out of range: ")
-    print("sensor " + sensor["name"] +" read value " + \
-          sensor["recent readings"][-1])
-    print("Not with " + sensor["low"] + "-" + sensor["high"] + " range")
+    ms = system_state.parameters["mail server"]
+    text = "Subject: Sensor Out of Range\n\n" + \
+    "Sensor value out of range: " + \
+    "\nsensor " + sensor["name"] +" read value " + str(sensor["recent readings"][-1]["value"]) + \
+    "\nNot with " + str(sensor["low"]) + "-" + str(sensor["high"]) + " range"    
+    users_cursor = user_collection.find()
+    user_list = list(users_cursor)
+    emails = []
+
+    for user in user_list:
+        print("email sent")
+        ms.send_email(user["email"], text)
 
 def app_init(state):
     my_app = Flask_App(state)
@@ -185,7 +191,11 @@ def app_init(state):
 
 def mail_init(state):
     ms = mail_server()
-    state.set("mail server", ms)
+    system_state.set("mail server", ms)
     ms.run(state)
 
-main()
+try:
+    main()
+except Exception as err:
+    print(err)
+    system_state.set("terminate", True)
