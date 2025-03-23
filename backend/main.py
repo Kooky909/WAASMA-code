@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from collections import deque
 from app import Flask_App
+from mail_server import mail_server
 from sys_state import Sys_State
 from random_test_sensor import Random_Test_Sensor
 from pymongo import MongoClient
@@ -20,14 +21,19 @@ system_state = Sys_State({
     "raw_sensors": [],       # tuple = sensor object, sensor id, sensor name, high, low, db collection
     "Sensor List": {},
     "terminate": False,
-    "New User Settings": False
+    "New User Settings": False,
+    "Mail Server": None
 })
 
 
 def main():
     # initialize app
     app_thread = threading.Thread(target=app_init, args=[system_state])
-    app_thread.start()
+    # app_thread.start()
+
+    # initialize mail server
+    mail_thread = threading.Thread(target=mail_init, args=[system_state])
+    mail_thread.start()
 
     # initialize connection with host computer
     # should be the only connection in the setup phase
@@ -35,6 +41,8 @@ def main():
 
     number = 0
     
+    print("Looking for sensors")
+
     # Loops until six sensors are added
     while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 3:
 
@@ -87,12 +95,14 @@ def main():
             system_state.set("New User Settings", False)
 
         # for testing purposes, ends after 10 seconds
-        #time.sleep(5)
-        #system_state.set("terminate", True)
+        time.sleep(5)
+        system_state.set("terminate", True)
+        print("time termination")
     # end main state while
 
     # Join all threads
     app_thread.join()
+    mail_thread.join()
     for thread in sensor_threads:
         thread.join()
 
@@ -131,27 +141,32 @@ def sensor_proc(sensor_wrapper):
 
     # read sensor data
     while not system_state.get("terminate"):
-        current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time":time.time()}
+        current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time": datetime.now().timestamp()}
 
         system_state.hard_lock()
-        sensor_wrapper["current reading"] = current_reading
-        sensor_wrapper["recent readings"].append(current_reading)
 
-        high = sensor_wrapper["high"]
-        low = sensor_wrapper["low"]
+        try:
+            sensor_wrapper["current reading"] = current_reading
+            sensor_wrapper["recent readings"].append(current_reading)
 
-        # print(sensor_wrapper["sensor"], "   ", current_reading["value"])
-        if current_reading["value"] > high or current_reading["value"] < low:
-            notification(sensor_wrapper)
+            high = sensor_wrapper["high"]
+            low = sensor_wrapper["low"]
 
-        while len(sensor_wrapper["recent readings"]) > 0:
-            if time.time() - sensor_wrapper["recent readings"][0]["time"] > 600:
-                sensor_wrapper["recent readings"].popleft()
-            else:
-                break
+            # print(sensor_wrapper["sensor"], "   ", current_reading["value"])
+            if current_reading["value"] > high or current_reading["value"] < low:
+                notification(sensor_wrapper)
 
-        # Creating a DB entry with the current reading
-        sensor_wrapper["db"].insert_one({"value": current_reading["value"], "time": datetime.now(), "sensor_id": sensor_wrapper["id"]})
+            while len(sensor_wrapper["recent readings"]) > 0:
+                if time.time() - sensor_wrapper["recent readings"][0]["time"] > 600:
+                    sensor_wrapper["recent readings"].popleft()
+                else:
+                    break
+
+            # Creating a DB entry with the current reading
+            sensor_wrapper["db"].insert_one({"value": current_reading["value"], "time": datetime.now(), "sensor_id": sensor_wrapper["id"]})
+        except Exception as err:
+            print("Error in sensor reading for " + sensor_wrapper["name"])
+            print("\n" + err)
 
         system_state.hard_release()
 
@@ -167,5 +182,10 @@ def app_init(state):
     my_app = Flask_App(state)
     my_app.run_app()
     pass
+
+def mail_init(state):
+    ms = mail_server()
+    state.set("mail server", ms)
+    ms.run(state)
 
 main()

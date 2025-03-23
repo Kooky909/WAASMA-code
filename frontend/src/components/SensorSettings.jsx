@@ -37,10 +37,6 @@ const SensorSettings = () => {
         setCurrentSensor({})
       }
     
-      const openCreateModal = () => {
-        if (!isModalOpen) setIsModalOpen(true)
-      }
-    
       const openEditModal = (sensor) => {
         if (isModalOpen) return
         setCurrentSensor(sensor)
@@ -64,7 +60,7 @@ const SensorSettings = () => {
                 <tr key={sensor.id} className="table-row">
                   <td>{sensor.type}</td>
                   <td>{sensor.tank}</td>
-                  <td>{sensor.coms}</td>
+                  <td>{sensor.connection}</td>
                   <td>{`${sensor.range_low}-${sensor.range_high}`}</td>
                   <td>
                     <button className="change-range-btn" onClick={() => openEditModal(sensor)}>

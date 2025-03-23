@@ -3,9 +3,9 @@ import json
 from bson import json_util, ObjectId
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
-from datetime import datetime
-from db_config import user_collection, test_sensor_collection
-import bcrypt
+from sys_state import Sys_State
+from datetime import datetime, timedelta
+from db_config import user_collection, sensor_collection, test_sensor_collection, w1_sensor_collection, a1_sensor_collection, p1_sensor_collection, w2_sensor_collection, a2_sensor_collection, p2_sensor_collection
 
 class Flask_App():
     # Shared with main
@@ -34,7 +34,22 @@ class Flask_App():
             sensors_cursor = test_sensor_collection.find()
             json_sensors = list(map(lambda x: json.loads(json_util.dumps(x)), sensors_cursor))
             return jsonify({"sensors": json_sensors})
-
+        
+        # This route updates the sensor configuration collection ?????
+        #@self.app.route("/config_sensors", methods=["POST"])
+        #def config_sensors():
+        #    data = request.json
+        #    if not data:
+        #        return (
+        #            jsonify({"message": "You must include all sensor data"}),
+        #            400,
+        #        )   
+        #    try:
+        #        sensor_collection.insert_one(data)
+        #    except Exception as e:
+        #        return jsonify({"message": str(e)}), 400
+        #    return jsonify({"message": "Sensors Configured!"}), 201
+        
         @self.app.route("/config_sensors", methods=["PATCH"])
         @require_role(["admin", "operator"])
         def config_sensors():
@@ -90,14 +105,9 @@ class Flask_App():
                 update = {"$set": {"frequency": int(frequency)}}
                 result = test_sensor_collection.update_one(setting_id, update) #using test sensor collection as an example. change as needed.
 
-                if result.matched_count == 0:
-                    return jsonify({"message": "Setting not found"}), 404
-
-                return jsonify({"message": "Setting updated successfully"}), 200
-
+                return jsonify({"message": "Sensor range updated."}), 200
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
-
         ####################################################################
         #                        ANALYSIS TOOL ROUTES
         ####################################################################
