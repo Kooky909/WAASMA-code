@@ -6,7 +6,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from sys_state import Sys_State
 from datetime import datetime, timedelta
-from db_config import user_collection, sensor_collection, test_sensor_collection, settings_collection
+from db_config import user_collection, sensor_collection, settings_collection
 
 class Flask_App():
     # Shared with main
@@ -35,7 +35,7 @@ class Flask_App():
         # This route returns a list of sensors from the sensor collection
         @self.app.route("/sensors", methods=["GET"])
         def get_sensors():
-            sensors_cursor = test_sensor_collection.find()
+            sensors_cursor = sensor_collection.find()
             # Convert documents to JSON format using bson's json_util
             json_sensors = list(map(lambda x: json.loads(json_util.dumps(x)), sensors_cursor))
             return jsonify({"sensors": json_sensors})
@@ -49,18 +49,26 @@ class Flask_App():
             print(json_settings)
             return jsonify({"settings": json_settings})
         
+        # This route returns the reset settings variable in the system state, determines if the backend has reset and is ready
+        @self.app.route("/backend_ready", methods=["GET"])
+        def backend_ready():
+            reset_sensors = self.state.get("reset sensors")
+            return jsonify({"backend_reset": reset_sensors})
+        
         @self.app.route("/config_sensors", methods=["PATCH"])
         #@require_role(["admin", "operator"])
         def config_sensors():
-            data = request.json
+            data = request.json['data']
+            print(data)
             if not data:
                 return jsonify({"message": "You must include all sensor data"}), 400
             try:
-                ### Is this right? make sure this is right
-                update = {"$set": data}
-                result = test_sensor_collection.update_many({}, update)
-                print(data)
-                # make sensor config additions
+                sensor_collection.delete_many({})  # This removes all documents in the collection
+                for tank in data:
+                    for sensor in tank['sensors']:
+                        sensor['tank'] = tank['tank']
+                        sensor_collection.insert_one(sensor)    # make collection additions
+
                 # change system state to running
                 settings_collection.update_one(
                     {},  # Empty query to target the first (and only) document
@@ -72,17 +80,20 @@ class Flask_App():
 
         # This route updates a high/low range values for a sensor in the sensor collection
         @self.app.route("/change_range/<id>", methods=["PATCH"])
-        @require_role(["admin", "operator"])
+        #@require_role(["admin", "operator"])
         def change_range(id):
             sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
-            existing_sensor = test_sensor_collection.find_one(sensor_id) # Check if the sensor exists
+            existing_sensor = sensor_collection.find_one(sensor_id) # Check if the sensor exists
             if not existing_sensor:
                 return jsonify({"message": "Sensor not found"}), 404
 
             data = request.json
             try:
                 update = {"$set": data}  # Use $set to update the specified fields
-                test_sensor_collection.update_one(sensor_id, update)
+                sensor_collection.update_one(sensor_id, update)
+                # Flip the flag
+                self.state.set("New Settings", True)
+                print("flipped flag")
                 return jsonify({"message": "Sensor ranges updated."}), 200
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
@@ -92,7 +103,7 @@ class Flask_App():
         def change_setting(id):
             try:
                 data = request.json   ###### IS THIS RIGHT???
-                frequency = data.get("frequency")
+                frequency = data.get("read_frequency")
 
                 if frequency is None:
                     return jsonify({"message": "Frequency is required"}), 400
@@ -100,8 +111,9 @@ class Flask_App():
                 # Assuming you have a collection to store settings
                 # and that you want to update the frequency field
                 setting_id = {"_id": ObjectId(id)}
-                update = {"$set": {"frequency": int(frequency)}}
-                result = test_sensor_collection.update_one(setting_id, update) #using test sensor collection as an example. change as needed.
+                update = {"$set": {"read_frequency": int(frequency)*60}}
+                settings_collection.update_one(setting_id, update) #using test sensor collection as an example. change as needed.
+                self.state.set("Read Frequency", int(frequency)*60)
 
                 return jsonify({"message": "Sensor range updated."}), 200
             except Exception as e:
@@ -123,13 +135,13 @@ class Flask_App():
             print(tankFilter, sensorFilter, startDateFilter, endDateFilter)
 
             if tankFilter == "all" and sensorFilter == "all":
-                sensor_ids_cursor = test_sensor_collection.find({}, {"_id": 1})
+                sensor_ids_cursor = sensor_collection.find({}, {"_id": 1})
             elif tankFilter == "all":
-                sensor_ids_cursor = test_sensor_collection.find({"type": filters.get("selectedSensor")}, {"_id": 1})
+                sensor_ids_cursor = sensor_collection.find({"type": filters.get("selectedSensor")}, {"_id": 1})
             elif sensorFilter == "all":
-                sensor_ids_cursor = test_sensor_collection.find({"tank": filters.get("selectedTank")}, {"_id": 1})
+                sensor_ids_cursor = sensor_collection.find({"tank": filters.get("selectedTank")}, {"_id": 1})
             else:
-                sensor_ids_cursor = test_sensor_collection.find({"tank": filters.get("selectedTank"), "type": filters.get("selectedSensor")}, {"_id": 1})
+                sensor_ids_cursor = sensor_collection.find({"tank": filters.get("selectedTank"), "type": filters.get("selectedSensor")}, {"_id": 1})
 
             sensor_ids_list = list(sensor_ids_cursor)
             sensor_ids = [sensor['_id'] for sensor in sensor_ids_list]
@@ -178,14 +190,14 @@ class Flask_App():
 
         # This route returns a list of users from users collection
         @self.app.route("/users", methods=["GET"])
-        @require_role(["admin", "operator"])
+        #@require_role(["admin", "operator"])
         def get_users():
             users_cursor = user_collection.find()
             json_users = list(map(lambda x: json.loads(json_util.dumps(x)), users_cursor))
             return jsonify({"users": json_users})
 
         @self.app.route("/create_user", methods=["POST"])
-        @require_role(["admin"])
+        #@require_role(["admin"])
         def create_user():
             data = request.json
             user_role = request.headers.get("Role")
@@ -219,7 +231,7 @@ class Flask_App():
 
         # This route deletes a user
         @self.app.route("/delete_user/<id>", methods=["DELETE"])
-        @require_role(["admin", "operator"])
+        #@require_role(["admin", "operator"])
         def delete_user(id):
             user_id = {"_id": ObjectId(id)}
             existing_user = user_collection.find_one(user_id)
@@ -231,7 +243,7 @@ class Flask_App():
         
         # This route returns the settings of a user
         @self.app.route("/user_settings/<id>", methods=["GET"])
-        @require_role(["admin", "operator"])
+        #@require_role(["admin", "operator"])
         def user_settings(id):
             user_id = {"_id": ObjectId(id)}
             existing_user = user_collection.find_one(user_id)

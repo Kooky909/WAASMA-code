@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import './ConfigSensorsForm.css';
 
 const ConfigSensorsForm = ({ onFormSubmit }) => {
-  const [numTanks, setNumTanks] = useState(0);
-  const [numSensors, setNumSensors] = useState(0);
+  const [numTanks, setNumTanks] = useState(2);
+  const [numSensors, setNumSensors] = useState(2);
   const [sensorData, setSensorData] = useState([]); // Stores config for each sensor in each tank
   const [errorMessage, setErrorMessage] = useState('');  // Error message state
 
@@ -20,9 +20,10 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
         tankSensors.push({
           name: "",
           type: "water",  // Default type
-          coms: "",
-          low: "",
-          high: ""
+          connection: "",
+          baud_rate: "",
+          range_low: "",
+          range_high: ""
         });
       }
       newData.push(tankSensors);
@@ -67,9 +68,10 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
       sensors: tankConfig.map(sensor => ({
         name: sensor.name,
         type: sensor.type,  // e.g., 'water'
-        coms: sensor.coms,  // Communication port or identifier
-        low: sensor.low,    // Low range value
-        high: sensor.high   // High range value
+        connection: sensor.connection,  // Communication port or identifier
+        baud_rate: sensor.baud_rate,   // Coms baud rate
+        range_low: sensor.range_low,    // Low range value
+        range_high: sensor.range_high   // High range value
       }))
     }));
 
@@ -173,37 +175,49 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
                 </tr>
 
                 <tr>
-                    <td><label htmlFor={`coms-${tankIndex}-${sensorIndex}`}>Communication:</label></td>
+                    <td><label htmlFor={`connection-${tankIndex}-${sensorIndex}`}>Communication:</label></td>
                     <td>  <input
                 type="text"
-                id={`coms-${tankIndex}-${sensorIndex}`}
-                value={sensorData[tankIndex]?.[sensorIndex]?.coms || ""}
+                id={`connection-${tankIndex}-${sensorIndex}`}
+                value={sensorData[tankIndex]?.[sensorIndex]?.connection || ""}
                 onChange={(e) =>
-                  handleInputChange(tankIndex, sensorIndex, "coms", e.target.value)
+                  handleInputChange(tankIndex, sensorIndex, "connection", e.target.value)
                 }
                 /></td>
                 </tr>
 
                 <tr>
-                  <td><label htmlFor={`low-${tankIndex}-${sensorIndex}`}>Range - Low:</label></td>
+                    <td><label htmlFor={`baud_rate-${tankIndex}-${sensorIndex}`}>Baud Rate:</label></td>
+                    <td>  <input
+                type="text"
+                id={`baud_rate-${tankIndex}-${sensorIndex}`}
+                value={sensorData[tankIndex]?.[sensorIndex]?.baud_rate || ""}
+                onChange={(e) =>
+                  handleInputChange(tankIndex, sensorIndex, "baud_rate", e.target.value)
+                }
+                /></td>
+                </tr>
+
+                <tr>
+                  <td><label htmlFor={`range_low-${tankIndex}-${sensorIndex}`}>Range - Low:</label></td>
                   <td><input
                 type="number"
-                id={`low-${tankIndex}-${sensorIndex}`}
-                value={sensorData[tankIndex]?.[sensorIndex]?.low || ""}
+                id={`range_low-${tankIndex}-${sensorIndex}`}
+                value={sensorData[tankIndex]?.[sensorIndex]?.range_low || ""}
                 onChange={(e) =>
-                  handleInputChange(tankIndex, sensorIndex, "low", e.target.value)
+                  handleInputChange(tankIndex, sensorIndex, "range_low", e.target.value)
                 }
                 /></td>
                 </tr>
 
                 <tr>
-                  <td><label htmlFor={`high-${tankIndex}-${sensorIndex}`}>Range - High:</label></td>
+                  <td><label htmlFor={`range_high-${tankIndex}-${sensorIndex}`}>Range - High:</label></td>
                   <td><input
                   type="number"
-                  id={`high-${tankIndex}-${sensorIndex}`}
-                  value={sensorData[tankIndex]?.[sensorIndex]?.high || ""}
+                  id={`range_high-${tankIndex}-${sensorIndex}`}
+                  value={sensorData[tankIndex]?.[sensorIndex]?.range_high || ""}
                   onChange={(e) =>
-                    handleInputChange(tankIndex, sensorIndex, "high", e.target.value)
+                    handleInputChange(tankIndex, sensorIndex, "range_high", e.target.value)
                   }
                 /></td>
                 </tr>

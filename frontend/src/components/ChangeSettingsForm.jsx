@@ -32,7 +32,7 @@ const ChangeSettingsForm = ({ settingChange, currentValue, updateCallback }) => 
     return (
         <form onSubmit={onSubmit}>
             <div>
-                <label htmlFor="frequency">Frequency:</label>
+                <label htmlFor="read_frequency">Frequency:</label>
                 <input
                     type="text"
                     id="read_frequency"

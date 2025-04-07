@@ -52,6 +52,7 @@ const SensorSettings = () => {
                 <th>Sensor Type</th>
                 <th>Tank #</th>
                 <th>Communication</th>
+                <th>Baud Rate</th>
                 <th>Range</th>
               </tr>
             </thead>
@@ -61,6 +62,7 @@ const SensorSettings = () => {
                   <td>{sensor.type}</td>
                   <td>{sensor.tank}</td>
                   <td>{sensor.connection}</td>
+                  <td>{sensor.baud_rate}</td>
                   <td>{`${sensor.range_low}-${sensor.range_high}`}</td>
                   <td>
                     <button className="change-range-btn" onClick={() => openEditModal(sensor)}>

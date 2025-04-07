@@ -9,6 +9,7 @@ function Settings() {
   const [readFrequency, setReadFrequency] = useState("");
   const [readFrequencyId, setReadFrequencyId] = useState("");
   const [systemState, setSystemState] = useState("");
+  const [runNumber, setRunNumber] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentValue, setCurrentValue] = useState({})
 
@@ -22,6 +23,7 @@ function Settings() {
     setReadFrequency(data.settings[0].read_frequency);
     setReadFrequencyId(data.settings[0]._id);
     setSystemState(data.settings[0].system_state)
+    setRunNumber(data.settings[0].run_number)
   };
 
   const closeModal = () => {
@@ -49,7 +51,7 @@ function Settings() {
             <tbody>
               <tr>
                 <td> Frequency of Data Reading: </td>
-                <td>{readFrequency}</td>
+                <td> Every {readFrequency} Minutes</td>
                 <td>
                 <button onClick={() => openEditModal()}>
                     Update
@@ -59,6 +61,10 @@ function Settings() {
               <tr>
                 <td> Current System State: </td>
                 <td>{systemState}</td>
+              </tr>
+              <tr>
+                <td> Current Run Number: </td>
+                <td>{runNumber}</td>
               </tr>
               
             </tbody>

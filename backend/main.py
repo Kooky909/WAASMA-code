@@ -1,7 +1,7 @@
 from w_sensor import Water_Sensor
 from a_sensor import Air_Sensor
 from p_sensor import Pressure_Sensor
-from db_config import db, user_collection, sensor_config_collection, test_sensor_collection
+from db_config import db, user_collection, sensor_collection, settings_collection
 from flask import jsonify
 import json
 from bson import json_util
@@ -21,14 +21,27 @@ system_state = Sys_State({
     "raw_sensors": [],       # tuple = sensor object, sensor id, sensor name, high, low, db collection
     "Sensor List": {},
     "terminate": False,
-    "New User Settings": False,
-    "Mail Server": None
+    "reset sensors": False,
+    "New Settings": False,
+    "Mail Server": None,
+    "Read Frequency": 60
 })
 
 def main():
     # initialize app
     app_thread = threading.Thread(target=app_init, args=[system_state])
     app_thread.start()
+
+    # pulls state from db
+    db_settings_cursor = settings_collection.find()
+    db_settings_list = list(db_settings_cursor)
+    system_state.set("state", db_settings_list[0]['system_state'])
+    while system_state.get("state") == "waiting":
+        print("waiting for system running")
+        time.sleep(1)
+        db_settings_cursor = settings_collection.find()
+        db_settings_list = list(db_settings_cursor)
+        system_state.set("state", db_settings_list[0]['system_state'])
 
     # initialize mail server
     mail_thread = threading.Thread(target=mail_init, args=[system_state])
@@ -43,32 +56,30 @@ def main():
     print("Looking for sensors")
 
     # Loops until six sensors are added
-    while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 3:
-        sensor_config = test_sensor_collection.find()
+    while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 2:
+        sensor_config = sensor_collection.find()
+        settings = settings_collection.find()
+        settings_list = list(settings)
 
-        # This loops through all the sensors, the while is not needed?
+        # This loops through all the sensors
         for sensor in sensor_config:
             # dynamically create a new collection and add to the tuple, this will read from sensor collection
-            db_name = f"{sensor["name"]}_collection"
-            #db_name = f"Sensor#{number}_collection"
+            db_name = f"{sensor["name"]}_collection_run{settings_list[0]["run_number"]}"
             db_collection = db[db_name]
             db_collection.insert_one({"init": "collection created"})
-            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], 10, 1, db_collection))
-            number = number + 1
-            #else:      
-            #    system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(number), 40000, 1, db_list[number]))
-            #    number = number + 1
+            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], float(sensor["range_high"]), float(sensor["range_low"]), db_collection))
 
-    # End Wait for 6 sensors
+            #system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(number), 40000, 1, db_list[number]))
 
-    print("six sensors connected")
+    # End Wait for 4 sensors
+
+    print("four sensors connected")
 
     # convert the raw sensor data to sensor wrappers
     for data_set in system_state.get("raw_sensors"):
         system_state.add_to_dict("Sensor List", data_set[1], new_sensor_wrapper(*data_set))
 
     print("sensors wrapped")
-    # need some threading action
 
     # create list of threads for each sensor
     sensor_threads = []
@@ -83,18 +94,52 @@ def main():
     print("all threads active")
     # main state
     while not system_state.get("terminate"):
-        if system_state.get("New User Settings"):
-            # 'New User Settings' boolean in system_state tells main to ask the DB
-            # for the new settings.
+        # If the flag is True, check for updates
+        if system_state.get("New Settings"):
+            print("New Settings Detected!!!!")
+            system_state.set("reset sensors", True)
+            for thread in sensor_threads:
+                thread.join()
+            print("all sensor threads joined")
 
-            # There needs to be a DB query here to get new user settings
+            # Empty raw sensors, sensor threads, and sensor list
+            system_state.set("raw_sensors", [])
+            sensor_threads = []
+            system_state.set("Sensor List", {})
 
-            # Reset 'New User Settings'
-            system_state.set("New User Settings", False)
+            # DB query to reset sensors
+            sensor_config = sensor_collection.find()   # get all the sensors
+            for sensor in sensor_config:
+                # dynamically create a new collection and add to the tuple, this will read from sensor collection
+                db_name = f"{sensor["name"]}_collection"
+                db_collection = db[db_name]
+                system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], 10, 1, db_collection))
+
+            # convert the raw sensor data to sensor wrappers
+            for data_set in system_state.get("raw_sensors"):
+                system_state.add_to_dict("Sensor List", data_set[1], new_sensor_wrapper(*data_set))
+
+            print("sensors rewrapped")
+
+            # create list of threads for each sensor
+            for sensor in system_state.get("Sensor List").values():
+                sensor_threads.append(threading.Thread(target=sensor_proc, args=[sensor]))
+
+            system_state.set("reset sensors", False) # Reset 'reset sensors'
+
+            # begin threads
+            for thread in sensor_threads:
+                thread.start()
+
+            print("all threads active again")
+
+            
+            system_state.set("New Settings", False) # Reset 'New Settings'
 
         # for testing purposes, ends after 10 seconds
         #time.sleep(5)
         #system_state.set("terminate", True)
+        # increment database run number on run termination
         #print("time termination")
     # end main state while
 
@@ -138,7 +183,7 @@ def sensor_proc(sensor_wrapper):
     # this sensor then sleep, shared storage needs protection
 
     # read sensor data
-    while not system_state.get("terminate"):
+    while (not system_state.get("terminate")) and (not system_state.get("reset sensors")):
         current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time": datetime.now().timestamp()}
 
         system_state.hard_lock()
@@ -155,7 +200,7 @@ def sensor_proc(sensor_wrapper):
                 notification(sensor_wrapper)
 
             while len(sensor_wrapper["recent readings"]) > 0:
-                if time.time() - sensor_wrapper["recent readings"][0]["time"] > 600:
+                if len(sensor_wrapper["recent readings"]) > 20:
                     sensor_wrapper["recent readings"].popleft()
                 else:
                     break
@@ -168,7 +213,10 @@ def sensor_proc(sensor_wrapper):
 
         system_state.hard_release()
 
-        time.sleep(1.5)
+        start_sleep = time.time()
+
+        while ( (time.time() - start_sleep) < system_state.get("Read Frequency")) and (not system_state.get("reset sensors")):
+            time.sleep(1)
 
 def notification(sensor):
     ms = system_state.parameters["mail server"]

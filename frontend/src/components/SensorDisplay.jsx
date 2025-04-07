@@ -12,12 +12,16 @@ ChartJS.register(
   CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend, LineElement, PointElement
 );
 
-const SensorDisplay = ( inputSensor ) => {
+const SensorDisplay = ({ inputSensor , onBackendReset }) => {
   let isFetching = false;
   const socket = useContext(WebSocketContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sensor, setSensor] = useState(inputSensor);
+  const [sensorName, setSensorName] = useState(inputSensor.name);
+  const [rangeLow, setRangeLow] = useState(inputSensor.range_low);
+  const [rangeHigh, setRangeHigh] = useState(inputSensor.range_high);
   const [sensorValue, setSensorValue] = useState();
+  const [readFrequency, setReadFrequency] = useState();
   const [sensorData, setSensorData] = useState({
     datasets: [
       {
@@ -25,15 +29,63 @@ const SensorDisplay = ( inputSensor ) => {
         data: [],
         borderColor: 'rgba(75,192,192,1)',
         backgroundColor: 'rgba(75,192,192,0.2)',
+        pointBackgroundColor: (context) => {          
+          const value = context.raw?.y;
+          if (value < rangeLow || value > rangeHigh) { // Highlight this point if value is 5
+            return 'red'; // Highlight color
+          }
+          return 'blue'; // Default color
+        },
+        pointBorderColor: (context) => {
+          const value = context.raw?.y;
+          if (value < rangeLow || value > rangeHigh) { // Highlight this point if value is 5
+            return 'red'; // Border color for highlighted point
+          }
+          return 'blue'; // Default border color
+        },
+        pointHoverBackgroundColor: 'yellow', // Hover effect for all points
+        pointHoverBorderColor: 'yellow', // Hover effect for all points
         fill: true,
         lineTension: 0.4,
       },
     ],
   });
+  const [chartOptions, setChartOptions] = useState({});
 
   // Web socket things
   useEffect(() => {
     setSensor(inputSensor);
+    setRangeLow(parseFloat(sensor.range_low))
+    setRangeHigh(parseFloat(sensor.range_high))
+    fetchSettings();
+    setChartOptions({
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: 'minute', // Change the time unit as needed
+          },
+          title: {
+            display: true,
+            text: 'Time',
+          },
+        },
+        y: {
+          min: parseFloat(sensor.range_low) - 2, // Set the minimum y-axis value
+          max: parseFloat(sensor.range_high) + 2, // Set the maximum y-axis value
+          ticks: {
+            callback: function(value) {
+              return value === 5 ? '5 - Target' : value;
+            }
+          },
+          title: {
+            display: true,
+            text: 'Value',
+          },
+        },
+      },
+      animation: false,
+    });
     if (!socket) return;
     
     // Function to handle async fetch data packet and sensor data
@@ -53,12 +105,18 @@ const SensorDisplay = ( inputSensor ) => {
     fetchData();
   }, [socket]);
 
+  const fetchSettings = async () => {
+    const response = await fetch("http://127.0.0.1:5000/settings");
+    const data = await response.json();
+    setReadFrequency(data.settings[0].read_frequency);
+  };
+
   const fetchDataPacket = async () => {
     return new Promise(async (resolve, reject) => {
     if (isFetching) return; // Prevent multiple fetches at the same time
     isFetching = true;
     try {
-      const sensor = inputSensor.inputSensor
+      const sensor = inputSensor
       const sensor_id = sensor._id;
       const packetData = await new Promise((resolve, reject) => {
         socket.emit("packet", { request: sensor_id });
@@ -93,7 +151,7 @@ const SensorDisplay = ( inputSensor ) => {
 
   const fetchSensorData = async () => {
     try {
-      const sensor = inputSensor.inputSensor
+      const sensor = inputSensor
       const sensor_id = sensor._id;
       const updateData = await new Promise((resolve, reject) => {
         socket.emit("update", { request: sensor_id });
@@ -108,8 +166,8 @@ const SensorDisplay = ( inputSensor ) => {
               ...prevData.datasets[0].data,
               { x: new Date(newData.time * 1000).toISOString(), y: newData.value }
             ];
-        // Keep only the latest 10 data points
-        if (holyData.length > 10) {
+        // Keep only the latest 20 data points
+        if (holyData.length > 20) {
           holyData.shift(); // Remove the oldest entry
         }
         return {
@@ -147,6 +205,7 @@ const SensorDisplay = ( inputSensor ) => {
 
   const onUpdate = () => {
     closeModal()
+    onBackendReset();
     fetchSensor()
   }
 
@@ -159,12 +218,12 @@ const SensorDisplay = ( inputSensor ) => {
         ...sensor,
         _id: sensor._id.$oid // Extract the ID as a string
     }));
-    setSensor(formattedSensors.find(newSensor => newSensor._id === sensor._id));
+    setSensor(formattedSensors.find(newSensor => newSensor._id === inputSensor._id));
   };
 
   return (
     <div>
-      <h2>{sensor.name} Sensor Data</h2>
+      <h2>{sensorName} Sensor Data</h2>
       <table>
         <thead>
           <tr>
@@ -178,23 +237,7 @@ const SensorDisplay = ( inputSensor ) => {
             <td>
               <Line
                 data={sensorData}
-                options={{
-                scales: {
-                  x: {
-                    type: 'time',
-                    time: {
-                      unit: 'minute', // Set the time unit for the x-axis
-                      stepSize: 100,     //100 minutes 
-                    },
-                    title: { display: true, text: 'Time' },
-                  },
-                  y: {
-                    beginAtZero: true, // Start the y-axis at zero
-                    title: { display: true, text: 'Value' },
-                  },
-                },
-                animation: false, // Disable animation for smoother updates
-              }}
+                options={ chartOptions }
               width={300}
               height={150}
             />
@@ -208,7 +251,7 @@ const SensorDisplay = ( inputSensor ) => {
           <div className="modal-content">
             <span className="close" onClick={closeModal}>&times;</span>
             {/* Pass selectedSensor data to the form */}
-            <ChangeRangeForm sensorChange={sensor} updateCallback={onUpdate} />
+            <ChangeRangeForm sensorChange={inputSensor} updateCallback={onUpdate} />
           </div>
         </div>
       )}

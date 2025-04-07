@@ -7,9 +7,12 @@ import { WebSocketContext } from "./WebSocketProvider";
 // Register required Chart.js components
 ChartJS.register(CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend, Filler);
 
-const HomeDisplay = () => {
+const HomeDisplay = ({ readFrequency1 }) => {
   const socket = useContext(WebSocketContext);
+  const [sensors, setSensors] = useState({ labels: [], datasets: [] });
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
+  const [chartOptions, setChartOptions] = useState({});
+  const [readFrequency, setReadFrequency] = useState();
 
   // Web socket things
   useEffect(() => {
@@ -19,9 +22,9 @@ const HomeDisplay = () => {
     const fetchData = async () => {
       try {
         // Fetch the packet data and await its completion
+        await fetchSettings();
         await fetchDataPacket();
         const intervalId = setInterval(fetchSensorData, 1500);
-        console.log("here")
         return () => {
           clearInterval(intervalId);
           socket.off("response");
@@ -31,7 +34,29 @@ const HomeDisplay = () => {
       }
     };
     fetchData();
+    fetchSensors();
   }, [socket]);
+
+  const fetchSettings = async () => {
+    const response = await fetch("http://127.0.0.1:5000/settings");
+    const data = await response.json();
+    setReadFrequency(data.settings[0].read_frequency);
+    while (readFrequency === undefined) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+    }
+  };
+
+  const fetchSensors = async () => {
+    const response = await fetch("http://127.0.0.1:5000/sensors");
+    const data = await response.json();
+
+    // Format the sensors to extract the ID correctly
+    const formattedSensors = data.sensors.map(sensor => ({
+        ...sensor,
+        _id: sensor._id.$oid // Extract the ID as a string
+    }));
+    setSensors(formattedSensors);
+  };
 
   const fetchDataPacket = async () => {
     return new Promise(async (resolve, reject) => {
@@ -44,7 +69,7 @@ const HomeDisplay = () => {
       });
       setChartData({
         datasets: Object.keys(packetData).map((sensor, index) => ({
-          label: `Sensor ${index + 1}`,
+          label: sensor,
           data: packetData[sensor].map((entry) => ({ x: new Date(entry.time * 1000).toISOString(), y: entry.value })), // Each sensor has its own timestamps
           borderColor: `hsl(${index * 60}, 70%, 50%, 0.7)`,
           backgroundColor: `hsl(${index * 60}, 70%, 80%, 0.7)`,
@@ -52,10 +77,39 @@ const HomeDisplay = () => {
           lineTension: 0.4,
         }))
       });
+      setChartOptions({
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'minute', // Change the time unit as needed
+            },
+            title: {
+              display: true,
+              text: 'Time',
+            },
+          },
+          y: {
+            min: 0,
+            max: 10,
+            ticks: {
+              callback: function(value) {
+                return value === 5 ? '5 - Target' : value;
+              }
+            },
+            title: {
+              display: true,
+              text: 'Value',
+            },
+          },
+        },
+        animation: false,
+      });
       // Optional: Reject the promise if there is an error with the socket event
       // setTimeout(() => reject(new Error('Timeout waiting for data')), 5000); // 5-second timeout
       } catch (error) {
         console.error('Error fetching data:', error);
+        SpeechSynthesisErrorEvent('Something went wrong. Try again');
       } finally {
         resolve();
       }
@@ -73,19 +127,19 @@ const HomeDisplay = () => {
       setChartData((prevData) => ({
         datasets: Object.keys(updateData).map((sensor, index) => {
           // Find existing dataset for this sensor
-          const prevDataset = prevData?.datasets?.find((d) => d.label === `Sensor ${index + 1}`);
+          const prevDataset = prevData?.datasets?.find((d) => d.label === sensor);
 
           // Preserve previous data and add new entries from the array
-          const newEntries = [updateData[sensor]].map(entry => ({ x: new Date(entry.time * 1000).toISOStrin, y: entry.value }));
+          const newEntries = [updateData[sensor]].map(entry => ({ x: new Date(entry.time * 1000).toISOString(), y: entry.value }));
 
           // Preserve previous data and add new point
           const newData = [...prevDataset.data, ...newEntries ];
-          // Keep only the latest 10 data points
-          if (newData.length > 10) {
+          // Keep only the latest 20 data points
+          if (newData.length > 20) {
             newData.shift(); // Remove the oldest entry
           }
           return {
-            label: `Sensor ${index + 1}`,
+            label: sensor,
             data: newData,
             borderColor: `hsl(${index * 60}, 70%, 50%, 0.7)`,
             backgroundColor: `hsl(${index * 60}, 70%, 80%, 0.7)`,
@@ -98,6 +152,7 @@ const HomeDisplay = () => {
       // setTimeout(() => reject(new Error('Timeout waiting for data')), 5000); // 5-second timeout
     } catch (error) {
       console.error('Error fetching data:', error);
+      SpeechSynthesisErrorEvent('Something went wrong. Try again');
     }
   };
 
@@ -105,25 +160,7 @@ const HomeDisplay = () => {
     <div>
       <Line
         data={chartData}
-        options={{
-          scales: {
-            x: {
-              type: 'time',
-              title: { display: true, text: 'Time' },
-              time: {
-                unit: 'minute', // Set the time unit for the x-axis
-              },
-            },
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Value' },
-            },
-          },
-          plugins: {
-            legend: { display: true },
-          },
-          animation: false,
-        }}
+        options={ chartOptions }
       />
     </div>
   );
