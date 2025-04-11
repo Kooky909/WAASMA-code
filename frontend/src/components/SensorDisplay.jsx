@@ -20,11 +20,11 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
   const [sensorName, setSensorName] = useState(inputSensor.name);
   const [rangeLow, setRangeLow] = useState(inputSensor.range_low);
   const [rangeHigh, setRangeHigh] = useState(inputSensor.range_high);
-  const [sensorValue, setSensorValue] = useState();
+  const [sensorValueCO2, setSensorValueCO2] = useState();
+  const [sensorValueDO, setSensorValueDO] = useState();
   const [readFrequency, setReadFrequency] = useState();
-  const [sensorData, setSensorData] = useState({
-    datasets: [
-      {
+  const [sensorData, setSensorData] = useState({ labels: [], datasets: [], });
+     /* {
         label: 'Sensor Data',
         data: [],
         borderColor: 'rgba(75,192,192,1)',
@@ -49,7 +49,7 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
         lineTension: 0.4,
       },
     ],
-  });
+  });*/
   const [chartOptions, setChartOptions] = useState({});
 
   // Web socket things
@@ -57,7 +57,7 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
     setSensor(inputSensor);
     setRangeLow(parseFloat(sensor.range_low))
     setRangeHigh(parseFloat(sensor.range_high))
-    fetchSettings();
+    //fetchSettings();
     setChartOptions({
       scales: {
         x: {
@@ -93,7 +93,7 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
       try {
         // Fetch the packet data and await its completion
         await fetchDataPacket();
-        const intervalId = setInterval(fetchSensorData, 1500);
+        const intervalId = setInterval(fetchSensorData, 5000);
         return () => {
           clearInterval(intervalId);
           socket.off("response");
@@ -118,24 +118,50 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
     try {
       const sensor = inputSensor
       const sensor_id = sensor._id;
+      console.log(`packet-${sensorName}`)
       const packetData = await new Promise((resolve, reject) => {
         socket.emit("packet", { request: sensor_id });
-        socket.once("packet", (data) => {
+        socket.once(`packet-${sensorName}`, (data) => {
           resolve(data); // Resolve promise when data is received
         });
       });
-      //const newLabels = packetData.packet_labels || [];
       const newData = packetData.packet_data || [];
 
       setSensorData((prevData) => {
         return {
-          datasets: [{
-            ...prevData.datasets[0],
-            data: [
-              ...prevData.datasets[0].data,
-              ...newData.map((entry) => ({ x: new Date(entry.time * 1000).toISOString(), y: entry.value })) // Format the data as x and y
-            ],
-          }],
+          datasets: [
+            ...prevData.datasets, // Keep previous datasets if any
+            ...Object.keys(newData).map((sensorKey) => {
+              const sensorData = newData[sensorKey];
+      
+              return {
+                label: sensorKey, // Set the label as the sensor name
+                data: sensorData.map((entry) => ({
+                  x: new Date(entry.time * 1000).toISOString(), // Format the timestamp
+                  y: entry.value // Use the value for y-axis
+                })),
+                borderColor: 'rgba(75,192,192,1)',
+                fill: true,
+                lineTension: 0.4,
+                pointBackgroundColor: (context) => {
+                  const value = context.raw?.y;
+                  if (value < rangeLow || value > rangeHigh) { // Highlight this point if value is out of range
+                    return 'red'; // Highlight color
+                  }
+                  return 'blue'; // Default color
+                },
+                pointBorderColor: (context) => {
+                  const value = context.raw?.y;
+                  if (value < rangeLow || value > rangeHigh) { // Highlight border color for out-of-range values
+                    return 'red'; // Border color for highlighted point
+                  }
+                  return 'blue'; // Default border color
+                },
+                pointHoverBackgroundColor: 'yellow', // Hover effect for all points
+                pointHoverBorderColor: 'yellow', // Hover effect for all points
+              };
+            }),
+          ],
         };
       });
       // Optional: Reject the promise if there is an error with the socket event
@@ -155,28 +181,58 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
       const sensor_id = sensor._id;
       const updateData = await new Promise((resolve, reject) => {
         socket.emit("update", { request: sensor_id });
-        socket.on("update", (data) => {
+        socket.on(`update-${sensorName}`, (data) => {
           resolve(data); // Resolve promise when data is received
         });
       });
       const newData = updateData.update_data;
-      setSensorValue(newData.value);
+      setSensorValueCO2(newData[`${sensorName}-CO2`].value);
+      setSensorValueDO(newData[`${sensorName}-DO`].value);
       setSensorData((prevData) => {
-        const holyData = [
-              ...prevData.datasets[0].data,
-              { x: new Date(newData.time * 1000).toISOString(), y: newData.value }
-            ];
-        // Keep only the latest 20 data points
-        if (holyData.length > 20) {
-          holyData.shift(); // Remove the oldest entry
-        }
+        // Map over newData to format it
+        const updatedDatasets = Object.keys(newData).map((sensorKey) => {
+          const sensor = newData[sensorKey]; // Get the sensor data object for each key
+      
+          // Check if this sensor already has data in the previous state
+          const existingSensorData = prevData.datasets.find(
+            (dataset) => dataset.label === sensorKey
+          );
+      
+          // Create the new data object with the new point
+          const newDataPoint = {
+            x: new Date(sensor.time * 1000).toISOString(), // Convert Unix timestamp to ISO format
+            y: sensor.value, // Measurement value for this sensor
+          };
+      
+          // If the sensor already has data, append the new point to the existing data
+          if (existingSensorData) {
+            existingSensorData.data.push(newDataPoint); // Append new data point
+            // Keep only the latest 20 data points
+            if (existingSensorData.data.length > 100) {
+              existingSensorData.data.shift(); // Remove the oldest entry
+            }
+            return existingSensorData;
+          } else {
+            // If the sensor is new, create a new dataset with the new data point
+            return {
+              label: sensorKey,
+              data: [newDataPoint],
+              borderColor: 'rgba(75,192,192,1)', // Customize colors as needed
+              backgroundColor: 'rgba(75,192,192,0.2)',
+              pointBackgroundColor: 'blue',
+              pointBorderColor: 'blue',
+              fill: true,
+              lineTension: 0.4,
+            };
+          }
+        });
+      
+        // Update the state with the new datasets, preserving previous ones and adding new data
         return {
-          datasets: [{
-            ...prevData.datasets[0],
-            data: holyData,
-          }],
+          datasets: updatedDatasets,
         };
       });
+      
       // Optional: Reject the promise if there is an error with the socket event
       // setTimeout(() => reject(new Error('Timeout waiting for data')), 5000); // 5-second timeout
     } catch (error) {
@@ -227,16 +283,25 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
       <table>
         <thead>
           <tr>
-            <th>Current Value</th>
+            <th></th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>{sensorValue || "Loading..."}</td>
+            <tr>
+            <td>CO2 Reading:</td>
+            <td>{sensorValueCO2 || "Loading..."}</td>
+            </tr>
+            <tr>
+            <td>DO Reading:</td>
+            <td>{sensorValueDO || "Loading..."}</td>
+            </tr>
             <td>
               <Line
-                data={sensorData}
+                data={{
+                  datasets: sensorData.datasets, // Using the datasets from state
+                }}
                 options={ chartOptions }
               width={300}
               height={150}

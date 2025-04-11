@@ -12,7 +12,7 @@ const HomeDisplay = ({ readFrequency1 }) => {
   const [sensors, setSensors] = useState({ labels: [], datasets: [] });
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const [chartOptions, setChartOptions] = useState({});
-  const [readFrequency, setReadFrequency] = useState();
+  //const [readFrequency, setReadFrequency] = useState();
 
   // Web socket things
   useEffect(() => {
@@ -22,9 +22,9 @@ const HomeDisplay = ({ readFrequency1 }) => {
     const fetchData = async () => {
       try {
         // Fetch the packet data and await its completion
-        await fetchSettings();
+        //await fetchSettings();
         await fetchDataPacket();
-        const intervalId = setInterval(fetchSensorData, 1500);
+        const intervalId = setInterval(fetchSensorData, 5000);
         return () => {
           clearInterval(intervalId);
           socket.off("response");
@@ -37,14 +37,14 @@ const HomeDisplay = ({ readFrequency1 }) => {
     fetchSensors();
   }, [socket]);
 
-  const fetchSettings = async () => {
+  /*const fetchSettings = async () => {
     const response = await fetch("http://127.0.0.1:5000/settings");
     const data = await response.json();
     setReadFrequency(data.settings[0].read_frequency);
     while (readFrequency === undefined) {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
     }
-  };
+  };*/
 
   const fetchSensors = async () => {
     const response = await fetch("http://127.0.0.1:5000/sensors");
@@ -91,7 +91,7 @@ const HomeDisplay = ({ readFrequency1 }) => {
           },
           y: {
             min: 0,
-            max: 10,
+            max: 60,
             ticks: {
               callback: function(value) {
                 return value === 5 ? '5 - Target' : value;
@@ -124,6 +124,7 @@ const HomeDisplay = ({ readFrequency1 }) => {
           resolve(data.update_data); // Resolve promise when data is received
         });
       });
+      console.log(updateData)
       setChartData((prevData) => ({
         datasets: Object.keys(updateData).map((sensor, index) => {
           // Find existing dataset for this sensor
@@ -135,7 +136,7 @@ const HomeDisplay = ({ readFrequency1 }) => {
           // Preserve previous data and add new point
           const newData = [...prevDataset.data, ...newEntries ];
           // Keep only the latest 20 data points
-          if (newData.length > 20) {
+          if (newData.length > 100) {
             newData.shift(); // Remove the oldest entry
           }
           return {

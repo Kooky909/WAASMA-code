@@ -145,7 +145,10 @@ function Home() {
                   .filter(sensor => sensor.tank === 1) // Filter by tank
                   .sort((a, b) => typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type)) // Sort by predefined order
                   .map((sensor, index) => (
-                    <SensorDisplay inputSensor={sensor} onBackendReset={handleBackendReset} />
+                    <SensorDisplay 
+                      key={`${sensor.name}-${sensor.measure}`} // ← unique key here
+                      inputSensor={sensor}
+                      onBackendReset={handleBackendReset} />
                   ))}
               </div>
             )}

@@ -53,28 +53,28 @@ from pymongo import MongoClient
 
 # Semaphore protected dictionary
 system_state = Sys_State({
-    # For debugging, not currently functional
+    # Contains the state of the system, placeholder is Initial, system goes between "waiting" and "running"
     "state": "Initial",
-
+    
     # Hopefully can add another tank with minimal implementation
     # If changed, double check initialization in main to ensure correctness
     "Sensor Groups": 2,
-    
+
     # Touple containing the raw data needed to create the sensors, unused outside
     # of Initialization, Startup, and resets
     # tuple = sensor object, sensor id, sensor name, high, low, db collection
-    "raw_sensors": [],   
-
+    "raw_sensors": [],
+    
     # Dictionary of sensors indexed by their names, contents are dictionaries
     # containing sensor information, see new_sensor_wrapper for details
     "Sensor List": {},
-
+    
     # terminate flag
     "terminate": False,
-
+    
     # instructs sensor threads to end
     "reset sensors": False,
-
+    
     # signals main that changes have been made to sensor configs
     "New Settings": False,
 
@@ -82,7 +82,7 @@ system_state = Sys_State({
     "Mail Server": None,
 
     # how often to read the sensors (in seconds)
-    "Read Frequency": 60
+    "Read Frequency": 5
 })
 
 def main():
@@ -100,7 +100,7 @@ def main():
     system_state.set("state", db_settings_list[0]['system_state'])
     while system_state.get("state") == "waiting":
         print("waiting for system running")
-        time.sleep(1)
+        time.sleep(5)
         db_settings_cursor = settings_collection.find()
         db_settings_list = list(db_settings_cursor)
         system_state.set("state", db_settings_list[0]['system_state'])
@@ -112,7 +112,7 @@ def main():
     # initialize connection with host computer
     # should be the only connection in the setup phase
     # Flask takes user data and fills in the sensor collection, system state is updated here
-    
+
     #--------------------#
     # Startup Section    #
     #--------------------#
@@ -122,29 +122,34 @@ def main():
     # Loops until all sensors are added
     # While loop should only run once, it confirms the correct sensor count
     # of tries again
-    while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 2:
-        sensor_config = sensor_collection.find()
-        settings = settings_collection.find()
-        settings_list = list(settings)
+    sensor_config = sensor_collection.find()
+    settings = settings_collection.find()
+    settings_list = list(settings)
 
-        # This loops through all the sensors
-        for sensor in sensor_config:
-            # dynamically create a new collection and add to the tuple, this will read from sensor collection
-            db_name = f"{sensor["name"]}_collection_run{settings_list[0]["run_number"]}"
-            db_collection = db[db_name]
-            db_collection.insert_one({"init": "collection created"})
-            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], float(sensor["range_high"]), float(sensor["range_low"]), db_collection))
-
-            #system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(number), 40000, 1, db_list[number]))
-
-    # End Wait for 4 sensors
-
-    print("four sensors connected")
+    # This loops through all the sensors
+    for sensor in sensor_config:
+        # dynamically create a new collection and add to the tuple, this will read from sensor collection
+        CO2_db_name = f"{sensor["name"]}_CO2_collection_run{settings_list[0]["run_number"]}"   # db for CO2
+        DO_db_name = f"{sensor["name"]}_DO_collection_run{settings_list[0]["run_number"]}"   # db for DO
+        CO2_db_collection = db[CO2_db_name]
+        DO_db_collection = db[DO_db_name]
+        CO2_db_collection.insert_one({"init": "collection created"})
+        DO_db_collection.insert_one({"init": "collection created"})
+        if sensor["connection"] == "COM3":
+            water_sensor = Water_Sensor(sensor["connection"], sensor["baud_rate"])
+            system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+            system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
+        else:
+            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+            system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
+        #system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(number), 40000, 1, db_list[number]))
+    
+    print("sensors connected")
 
     # convert the raw sensor data to sensor wrappers
-    # repackaging the sensor infor into a more usable form
+    # repackaging the sensor info into a more usable form
     for data_set in system_state.get("raw_sensors"):
-        system_state.add_to_dict("Sensor List", data_set[1], new_sensor_wrapper(*data_set))
+        system_state.add_to_dict("Sensor List", f"{data_set[2]}-{data_set[3]}", new_sensor_wrapper(*data_set))
 
     print("sensors wrapped")
 
@@ -183,9 +188,13 @@ def main():
             sensor_config = sensor_collection.find()   # get all the sensors
             for sensor in sensor_config:
                 # dynamically create a new collection and add to the tuple, this will read from sensor collection
-                db_name = f"{sensor["name"]}_collection"
-                db_collection = db[db_name]
-                system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], 10, 1, db_collection))
+                CO2_db_name = f"{sensor["name"]}_CO2_collection_run{settings_list[0]["run_number"]}"   # db for CO2
+                DO_db_name = f"{sensor["name"]}_DO_collection_run{settings_list[0]["run_number"]}"   # db for DO
+                CO2_db_collection = db[CO2_db_name]
+                DO_db_collection = db[DO_db_name]
+                #water_sensor = Water_Sensor(sensor["connection"], sensor["baud_rate"])
+                system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+                system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
 
             # convert the raw sensor data to sensor wrappers
             for data_set in system_state.get("raw_sensors"):
@@ -208,11 +217,6 @@ def main():
             # reset the new settings flag
             system_state.set("New Settings", False) # Reset 'New Settings'
 
-        # for testing purposes, ends after n seconds
-        #time.sleep(5)
-        #system_state.set("terminate", True)
-        # increment database run number on run termination
-        #print("time termination")
     # end main state while
 
     # Join all threads
@@ -225,20 +229,23 @@ def main():
     # ends program
     # data = w_sensor1.disconnect_port()    --- implement at end of run for sensors
 
+
 # creates dictionary breakdown for sensor
 # This is intended to make it easier to access the
 # sensor parameters
-def new_sensor_wrapper(sensor, id, name, high, low, db):
+def new_sensor_wrapper(sensor, id, name, measure, high, low, db):
     out = {
         "sensor": sensor,
         "id": id,
         "name": name,
+        "measure": measure,
         "high": high,
         "low": low,
         "db": db,
         "current reading": {},
         "recent readings": deque()
     }
+    print("wrapping sensor ", name, " of measure ", measure)
     return out
 
 
@@ -262,18 +269,16 @@ def new_sensor_wrapper(sensor, id, name, high, low, db):
 #       Store reading in DB
 #       Release semaphore
 #       Wait based on system configurations
-
 def sensor_proc(sensor_wrapper):
     # will continuously update with the current value of
     # this sensor then sleep, shared storage needs protection
 
     # read sensor data
     while (not system_state.get("terminate")) and (not system_state.get("reset sensors")):
-        # get current sensor value
-        current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time": datetime.now().timestamp()}
-
         # Lock the semaphore
         system_state.hard_lock()
+        # get current sensor value
+        current_reading = {"value":sensor_wrapper["sensor"].read_data(sensor_wrapper["measure"]), "time": datetime.now().timestamp()}
 
         # avoid freezing the entire system with an exception
         try:
@@ -285,15 +290,13 @@ def sensor_proc(sensor_wrapper):
             high = sensor_wrapper["high"]
             low = sensor_wrapper["low"]
 
-            # print(sensor_wrapper["sensor"], "   ", current_reading["value"])
-
             # if reading out of range, notify users
             if current_reading["value"] > high or current_reading["value"] < low:
                 notification(sensor_wrapper)
 
             # limit length of recent readings
             while len(sensor_wrapper["recent readings"]) > 0:
-                if len(sensor_wrapper["recent readings"]) > 20:
+                if len(sensor_wrapper["recent readings"]) > 100:
                     sensor_wrapper["recent readings"].popleft()
                 else:
                     break
@@ -310,7 +313,7 @@ def sensor_proc(sensor_wrapper):
         # sleep
         start_sleep = time.time()
 
-        while ( (time.time() - start_sleep) < system_state.get("Read Frequency")) and (not (system_state.get("reset sensors") or system_state.get("terminate"))):
+        while ( (time.time() - start_sleep) < system_state.get("Read Frequency")) and (not system_state.get("reset sensors")):
             time.sleep(1)
 
 
@@ -333,7 +336,6 @@ def notification(sensor):
     for user in user_list:
         print("email sent")
         ms.send_email(user["email"], text)
-
 
 #   Create Flask App and hand it execution on this thread.
 def app_init(state):

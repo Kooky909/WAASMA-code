@@ -112,13 +112,33 @@ class Flask_App():
                 # and that you want to update the frequency field
                 setting_id = {"_id": ObjectId(id)}
                 update = {"$set": {"read_frequency": int(frequency)*60}}
-                settings_collection.update_one(setting_id, update) #using test sensor collection as an example. change as needed.
+                settings_collection.update_one(setting_id, update)
                 self.state.set("Read Frequency", int(frequency)*60)
 
                 return jsonify({"message": "Sensor range updated."}), 200
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
             
+
+        @self.app.route("/stop_run", methods=["PATCH"])
+        #@require_role(["admin", "operator"])
+        def stop_run():
+            data = request.json
+            setting_id = data.get('setting_id')
+            # change db system state to waiting
+            update = {"$set": {"system_state": "waiting"}}
+            settings_collection.update_one({"_id": setting_id}, update) #using test sensor collection as an example. change as needed.
+
+            # change state System state to terminate
+            self.state.set("terminate", True)
+
+            # increment run number
+            current_setting = list(settings_collection.find())
+            current_run_number = current_setting[0]['run_number']
+            update = {"$set": {"run_number": current_run_number+1}}
+            settings_collection.update_one({"_id": setting_id}, update)
+            print("run has been stopped")
+            return jsonify({"message": "Run has been stopped"}), 200            
 
         ####################################################################
         #                        ANALYSIS TOOL ROUTES
@@ -307,7 +327,6 @@ class Flask_App():
 
             if client_request == "home":
                 for sensor_id, sensor_data in Sensor_List.items():
-                    sensor_name = sensor_data["name"]  # Get the sensor name
                     formatted_readings = []
                     for reading in sensor_data["recent readings"]:
                         formatted_readings.append({
@@ -315,11 +334,12 @@ class Flask_App():
                             "value": reading["value"]
                         })
 
-                    newData[sensor_name] = formatted_readings # Store in the newData w/ sensor name
+                    newData[sensor_id] = formatted_readings # Store in the newData w/ sensor name
                 emit('packet_home', {"packet_data": newData}, broadcast=True)
             else:
-                for sensor_id, sensor_data in Sensor_List.items():
-                    if str(sensor_id) == client_request:
+                all_measurements = {}
+                for sensor_name_measure, sensor_data in Sensor_List.items():
+                    if str(sensor_data["id"]) == client_request:
                         sensor_name = sensor_data["name"]  # Get the sensor name
                         formatted_readings = []
                         for reading in sensor_data["recent readings"]:
@@ -327,8 +347,9 @@ class Flask_App():
                                 "time": reading["time"],
                                 "value": reading["value"]
                             })
-                        emit('packet', {"packet_data": formatted_readings}, broadcast=True)
-                    #newData[sensor_name] = formatted_readings # Store in the newData w/ sensor name
+                        all_measurements[sensor_name_measure] = formatted_readings
+                packet = f"packet-{sensor_name}"
+                emit(packet, {"packet_data": all_measurements}, broadcast=True)
                   
 
         @self.socketio.on('update')
@@ -342,17 +363,19 @@ class Flask_App():
                 for sensor_id, sensor_data in Sensor_List.items():
                     sensor_name = sensor_data["name"]  # Get the sensor name
                     reading = sensor_data["current reading"]
-                    newData[sensor_name] = ({
+                    newData[sensor_id] = ({
                         "time": reading["time"],
                         "value": reading["value"]
                     }) # Store in the newData w/ sensor name
                 emit('update_home', {"update_data": newData}, broadcast=True)
             else:
-                for sensor_id, sensor_data in Sensor_List.items():
-                    if str(sensor_id) == client_request:
+                all_readings = {}
+                for sensor_name_measure, sensor_data in Sensor_List.items():
+                    if str(sensor_data["id"]) == client_request:
                         sensor_name = sensor_data["name"]  # Get the sensor name
-                        reading = sensor_data["current reading"]
-                        emit('update', {"update_data": reading}, broadcast=True)
+                        all_readings[sensor_name_measure] = sensor_data["current reading"]
+                update = f"update-{sensor_name}"
+                emit(update, {"update_data": all_readings}, broadcast=True)
 
         @self.socketio.on('disconnect')
         def client_disconnect():

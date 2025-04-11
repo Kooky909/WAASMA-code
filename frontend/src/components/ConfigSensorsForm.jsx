@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import './ConfigSensorsForm.css';
 
 const ConfigSensorsForm = ({ onFormSubmit }) => {
-  const [numTanks, setNumTanks] = useState(2);
-  const [numSensors, setNumSensors] = useState(2);
+  const [numTanks, setNumTanks] = useState(1);
+  const [numSensors, setNumSensors] = useState(1);
   const [sensorData, setSensorData] = useState([]); // Stores config for each sensor in each tank
   const [errorMessage, setErrorMessage] = useState('');  // Error message state
 
@@ -22,8 +22,16 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
           type: "water",  // Default type
           connection: "",
           baud_rate: "",
-          range_low: "",
-          range_high: ""
+          measures: {
+              CO2: {
+                range_low: "",
+                range_high: ""
+              },
+              DO: {
+                range_low: "",
+                range_high: ""
+              }
+          },
         });
       }
       newData.push(tankSensors);
@@ -70,8 +78,16 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
         type: sensor.type,  // e.g., 'water'
         connection: sensor.connection,  // Communication port or identifier
         baud_rate: sensor.baud_rate,   // Coms baud rate
-        range_low: sensor.range_low,    // Low range value
-        range_high: sensor.range_high   // High range value
+        measures: {
+          CO2: {
+            range_low: sensor.range_low_CO2,
+            range_high: sensor.range_high_CO2
+          },
+          DO: {
+            range_low: sensor.range_low_DO,
+            range_high: sensor.range_high_DO
+          }
+        }
       }))
     }));
 
@@ -169,7 +185,6 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
                   }>
                   <option value="water">Water</option>
                   <option value="air">Air</option>
-                  <option value="pressure">Pressure</option>
                   </select>
                   </td>
                 </tr>
@@ -198,26 +213,52 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
                 /></td>
                 </tr>
 
+                {/* CO2 high/low ranges */}
                 <tr>
-                  <td><label htmlFor={`range_low-${tankIndex}-${sensorIndex}`}>Range - Low:</label></td>
+                  <td><label htmlFor={`range_low_CO2-${tankIndex}-${sensorIndex}`}>CO2 Range - Low:</label></td>
                   <td><input
                 type="number"
-                id={`range_low-${tankIndex}-${sensorIndex}`}
-                value={sensorData[tankIndex]?.[sensorIndex]?.range_low || ""}
+                id={`range_low_CO2-${tankIndex}-${sensorIndex}`}
+                value={sensorData[tankIndex]?.[sensorIndex]?.range_low_CO2|| ""}
                 onChange={(e) =>
-                  handleInputChange(tankIndex, sensorIndex, "range_low", e.target.value)
+                  handleInputChange(tankIndex, sensorIndex, "range_low_CO2", e.target.value)
                 }
                 /></td>
                 </tr>
 
                 <tr>
-                  <td><label htmlFor={`range_high-${tankIndex}-${sensorIndex}`}>Range - High:</label></td>
+                  <td><label htmlFor={`range_high-${tankIndex}-${sensorIndex}`}>CO2 Range - High:</label></td>
                   <td><input
                   type="number"
-                  id={`range_high-${tankIndex}-${sensorIndex}`}
-                  value={sensorData[tankIndex]?.[sensorIndex]?.range_high || ""}
+                  id={`range_high_CO2-${tankIndex}-${sensorIndex}`}
+                  value={sensorData[tankIndex]?.[sensorIndex]?.range_high_CO2 || ""}
                   onChange={(e) =>
-                    handleInputChange(tankIndex, sensorIndex, "range_high", e.target.value)
+                    handleInputChange(tankIndex, sensorIndex, "range_high_CO2", e.target.value)
+                  }
+                /></td>
+                </tr>
+
+                {/* DO high/low ranges */}
+                <tr>
+                  <td><label htmlFor={`range_low_DO-${tankIndex}-${sensorIndex}`}>DO Range - Low:</label></td>
+                  <td><input
+                type="number"
+                id={`range_low_DO-${tankIndex}-${sensorIndex}`}
+                value={sensorData[tankIndex]?.[sensorIndex]?.range_low_DO || ""}
+                onChange={(e) =>
+                  handleInputChange(tankIndex, sensorIndex, "range_low_DO", e.target.value)
+                }
+                /></td>
+                </tr>
+
+                <tr>
+                  <td><label htmlFor={`range_high_DO-${tankIndex}-${sensorIndex}`}>DO Range - High:</label></td>
+                  <td><input
+                  type="number"
+                  id={`range_high_DO-${tankIndex}-${sensorIndex}`}
+                  value={sensorData[tankIndex]?.[sensorIndex]?.range_high_DO || ""}
+                  onChange={(e) =>
+                    handleInputChange(tankIndex, sensorIndex, "range_high_DO", e.target.value)
                   }
                 /></td>
                 </tr>
