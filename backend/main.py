@@ -15,24 +15,86 @@ from sys_state import Sys_State
 from random_test_sensor import Random_Test_Sensor
 from pymongo import MongoClient
 
+#----------------------------------------------------------------------------------------
+#   Entry Point for the Aqualb Sensor system
+#   See README file for system architecture
+
+#   Summary of File
+#   main.py serves as the control module for the backend.
+#   it creates multiple threads: the webApp, the mail server and
+#   a thread to read each sensor. Implementation is intended to 
+#   avoid freezes while waiting on IO from the sensors
+#   Data is communicated between threads primarily using the
+#   sys_state class. In short it is a semaphore protected dictionary
+#   see sys_state.py for details. main.py also contains the code
+#   for sensor_proc, which is the function the sensor threads execute
+#   in.  
+
+#   Execution Flow (main):
+#       Initialization:
+#           Create system_state instance
+#           Run app and mail threads
+#           Get sensor and config info from the DB
+#       Startup:
+#           Connect to sensors on their Com ports
+#           Compile all sensor information
+#           Run threads for each sensor
+#       Running State:
+#           Checks for terminate flag
+#               Moves to terminate
+#           Checks for new settings flag
+#               Kills all sensor threads
+#               Repeats all startup steps with ne configs in DB
+#           Repeat
+#       Terminate:
+#           Rejoin all other threads
+#           Ends
+#----------------------------------------------------------------------------------------
+
+# Semaphore protected dictionary
 system_state = Sys_State({
+    # For debugging, not currently functional
     "state": "Initial",
+
+    # Hopefully can add another tank with minimal implementation
+    # If changed, double check initialization in main to ensure correctness
     "Sensor Groups": 2,
-    "raw_sensors": [],       # tuple = sensor object, sensor id, sensor name, high, low, db collection
+    
+    # Touple containing the raw data needed to create the sensors, unused outside
+    # of Initialization, Startup, and resets
+    # tuple = sensor object, sensor id, sensor name, high, low, db collection
+    "raw_sensors": [],   
+
+    # Dictionary of sensors indexed by their names, contents are dictionaries
+    # containing sensor information, see new_sensor_wrapper for details
     "Sensor List": {},
+
+    # terminate flag
     "terminate": False,
+
+    # instructs sensor threads to end
     "reset sensors": False,
+
+    # signals main that changes have been made to sensor configs
     "New Settings": False,
+
+    # Access point to the mail server
     "Mail Server": None,
+
+    # how often to read the sensors (in seconds)
     "Read Frequency": 60
 })
 
 def main():
-    # initialize app
+    #--------------------#
+    # Initialize Section #
+    #--------------------#
+
+    # initialize app thread
     app_thread = threading.Thread(target=app_init, args=[system_state])
     app_thread.start()
 
-    # pulls state from db
+    # pulls state values from db
     db_settings_cursor = settings_collection.find()
     db_settings_list = list(db_settings_cursor)
     system_state.set("state", db_settings_list[0]['system_state'])
@@ -50,12 +112,16 @@ def main():
     # initialize connection with host computer
     # should be the only connection in the setup phase
     # Flask takes user data and fills in the sensor collection, system state is updated here
-
-    number = 0
     
+    #--------------------#
+    # Startup Section    #
+    #--------------------#
+
     print("Looking for sensors")
 
-    # Loops until six sensors are added
+    # Loops until all sensors are added
+    # While loop should only run once, it confirms the correct sensor count
+    # of tries again
     while not len(system_state.get("raw_sensors")) == system_state.get("Sensor Groups") * 2:
         sensor_config = sensor_collection.find()
         settings = settings_collection.find()
@@ -76,6 +142,7 @@ def main():
     print("four sensors connected")
 
     # convert the raw sensor data to sensor wrappers
+    # repackaging the sensor infor into a more usable form
     for data_set in system_state.get("raw_sensors"):
         system_state.add_to_dict("Sensor List", data_set[1], new_sensor_wrapper(*data_set))
 
@@ -87,6 +154,7 @@ def main():
         sensor_threads.append(threading.Thread(target=sensor_proc, args=[sensor]))
 
     # begin threads
+    # sleep prevents certain concurrency issues
     time.sleep(5)
     for thread in sensor_threads:
         thread.start()
@@ -94,13 +162,17 @@ def main():
     print("all threads active")
     # main state
     while not system_state.get("terminate"):
-        # If the flag is True, check for updates
+        # If the flag is True, reset sensors and apply updates
         if system_state.get("New Settings"):
             print("New Settings Detected!!!!")
             system_state.set("reset sensors", True)
+
+            # all sensor threads stopped
             for thread in sensor_threads:
                 thread.join()
             print("all sensor threads joined")
+
+            # repeat the startup procedure
 
             # Empty raw sensors, sensor threads, and sensor list
             system_state.set("raw_sensors", [])
@@ -133,10 +205,10 @@ def main():
 
             print("all threads active again")
 
-            
+            # reset the new settings flag
             system_state.set("New Settings", False) # Reset 'New Settings'
 
-        # for testing purposes, ends after 10 seconds
+        # for testing purposes, ends after n seconds
         #time.sleep(5)
         #system_state.set("terminate", True)
         # increment database run number on run termination
@@ -150,19 +222,12 @@ def main():
         thread.join()
 
     print("all threads closed")
-
+    # ends program
     # data = w_sensor1.disconnect_port()    --- implement at end of run for sensors
 
-
-# Somehow detects sensors connected but not implemented
-# in code to allow the user to set them up
-# implementation unknown
-def detect_sensors():
-    # Show available sensors
-    pass
-
-
 # creates dictionary breakdown for sensor
+# This is intended to make it easier to access the
+# sensor parameters
 def new_sensor_wrapper(sensor, id, name, high, low, db):
     out = {
         "sensor": sensor,
@@ -177,28 +242,56 @@ def new_sensor_wrapper(sensor, id, name, high, low, db):
     return out
 
 
-# Multithread entry point for each sensor
+#   sensor_proc: Multithread entry point for each sensor
+
+#   Summary:
+#   Thread repeatedly reads sensor value and stores it.
+#   Keeps a reccord of recent readings.
+#   Because thread is directly modifying shared variables, 
+#   most computation is in a semaphore lock.
+#   CAUTION: uncaught exceptions in the semaphore lock will 
+#   freeze all other threads since it never releases. That is
+#   why there is a very broad try catch covering the lock.
+
+#   Execution Flow (sensor_proc)
+#       Check if terminate or reset flags have been flipped
+#           End thread if either has
+#       Read new value
+#       Lock the semaphore
+#       Store reading in que of this sensors recent readings
+#       Store reading in DB
+#       Release semaphore
+#       Wait based on system configurations
+
 def sensor_proc(sensor_wrapper):
     # will continuously update with the current value of
     # this sensor then sleep, shared storage needs protection
 
     # read sensor data
     while (not system_state.get("terminate")) and (not system_state.get("reset sensors")):
+        # get current sensor value
         current_reading = {"value":sensor_wrapper["sensor"].read_data(), "time": datetime.now().timestamp()}
 
+        # Lock the semaphore
         system_state.hard_lock()
 
+        # avoid freezing the entire system with an exception
         try:
+            # store reading in the wrapper
             sensor_wrapper["current reading"] = current_reading
             sensor_wrapper["recent readings"].append(current_reading)
 
+            # check if reading in range
             high = sensor_wrapper["high"]
             low = sensor_wrapper["low"]
 
             # print(sensor_wrapper["sensor"], "   ", current_reading["value"])
+
+            # if reading out of range, notify users
             if current_reading["value"] > high or current_reading["value"] < low:
                 notification(sensor_wrapper)
 
+            # limit length of recent readings
             while len(sensor_wrapper["recent readings"]) > 0:
                 if len(sensor_wrapper["recent readings"]) > 20:
                     sensor_wrapper["recent readings"].popleft()
@@ -211,13 +304,22 @@ def sensor_proc(sensor_wrapper):
             print("Error in sensor reading for " + sensor_wrapper["name"])
             print("\n" + str(err))
 
+        # release semaphore
         system_state.hard_release()
 
+        # sleep
         start_sleep = time.time()
 
-        while ( (time.time() - start_sleep) < system_state.get("Read Frequency")) and (not system_state.get("reset sensors")):
+        while ( (time.time() - start_sleep) < system_state.get("Read Frequency")) and (not (system_state.get("reset sensors") or system_state.get("terminate"))):
             time.sleep(1)
 
+
+#   Provides emails to the email server
+
+#   Created email message to send to all addresses
+#   Gives that email to each address in the mail server.
+#   Occurs within sensor_proc semaphore lock, so no
+#   concurrency protection in this method.
 def notification(sensor):
     ms = system_state.parameters["mail server"]
     text = "Subject: Sensor Out of Range\n\n" + \
@@ -232,16 +334,20 @@ def notification(sensor):
         print("email sent")
         ms.send_email(user["email"], text)
 
+
+#   Create Flask App and hand it execution on this thread.
 def app_init(state):
     my_app = Flask_App(state)
     my_app.run_app()
     pass
 
+#   Create mail server and hand it execution on this thread.
 def mail_init(state):
     ms = mail_server()
     system_state.set("mail server", ms)
     ms.run(state)
 
+# If main fails, try and shut down the other threads
 try:
     main()
 except Exception as err:
