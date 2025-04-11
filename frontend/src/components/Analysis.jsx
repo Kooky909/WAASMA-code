@@ -172,7 +172,8 @@ function Analysis() {
             />
           </div>
   
-          <button type="submit" className="apply-button">Apply Filters</button>
+          <button type="submit" className="apply-button">
+            Apply Filters</button>
         </div>
       </form>
   

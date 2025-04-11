@@ -1,0 +1,110 @@
+/****** HAMBURGER MENU STYLING ******/
+
+.hamburger-menu {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  
+}
+
+.menu-icon {
+  font-size: 2em; /* Adjust size as needed */
+  color: #333;
+  cursor: pointer;
+  padding: 10px; /* Add some padding */
+  line-height: 1; 
+  border: none; 
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  width: 250px;
+  height: 100%;
+  background-color: #333;
+  transition: left 0.3s ease;
+  padding-top: 60px;
+  z-index: 1000; 
+}
+
+.hm-close-button {
+  position: absolute;
+  top: 10px;
+  background: none;
+  color: white;
+  border: none;
+  font-size: 2em; /* Adjust font size */
+  cursor: pointer;
+  padding: 5px 10px 5px 15px; 
+  z-index: 11;
+}
+
+.hm-close-button:hover {
+  background-color: #333;
+  width: 50px;
+}
+
+.navbar-container {
+    display: flex;
+    justify-content: space-between; /* Put welcome on left, hamburger on right */
+    align-items: center; /* Vertically align items */
+    padding: 10px 20px; /* Add some padding around the navbar */
+  }
+  
+  .welcome-guest {
+    font-size: 16px; /* Adjust as needed */
+    color: #333; /* Adjust as needed */
+  }
+  
+  .hamburger-menu {
+    position: relative;
+    display: flex;
+    justify-content: flex-start; /* Keep hamburger icon on the left within its container */
+  }
+  
+  .menu-icon {
+    font-size: 2em; /* Adjust size as needed */
+    color: #333;
+    cursor: pointer;
+    padding: 10px; /* Add some padding */
+    line-height: 1;
+    border: none;
+    background: none;
+  }
+  
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -250px;
+    width: 250px;
+    height: 100%;
+    background-color: #333;
+    transition: left 0.3s ease;
+    padding-top: 60px;
+    z-index: 1000;
+  }
+  
+  .sidebar.open {
+    left: 0;
+  }
+  
+  .hm-close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px; /*moves the X further to the right*/
+    background: none;
+    color: white;
+    border: none;
+    font-size: 2em; /* Adjust font size */
+    cursor: pointer;
+    padding: 5px 10px 5px 15px;
+    z-index: 11;
+  }
+  
+  .hm-close-button:hover {
+    background-color: #333;
+    width: 50px;
+  }
+  
+  /* ... rest of your CSS ... */

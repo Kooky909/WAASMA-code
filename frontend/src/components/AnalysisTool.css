@@ -40,19 +40,29 @@
   background-color: #d0d9f0; /* Light gray */
   border-radius: 5px;
   display: inline-block; /* Makes the background fit the text */
+  padding: 5px;
 }
 
 .apply-button {
-    padding: 6px 12px;
-    font-size: 14px;
+    font-size: 17px;
     background-color: #007bff;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    padding: 5px 10px;
+    width: 150px;
+    height: 50px;
+    z-index: 1;
 }
   
 .apply-button:hover {
     background-color: #0056b3;
+}
+
+.filter-item .react-datepicker__input-container {
+    background-color: #d0d9f0 !important; /* Use !important to ensure override */
+    border-color:1px solid black !important; /* Remove any default border */
+    width: 170px;
 }
   

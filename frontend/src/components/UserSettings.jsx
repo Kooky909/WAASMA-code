@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 
 /* Uncomment if EditUserSettingsForm is available */
 // import EditUserSettingsForm from "./EditUserSettingsForm";
+import "./UsersStyles.css";
 
 const UserSettings = () => {
   const [userSettings, setSettings] = useState(null); // Initialized to null for better error handling
@@ -84,7 +85,7 @@ const UserSettings = () => {
       {isModalOpen && (
         <div className="modal">
           <div className="modal-content">
-            <span className="close" onClick={closeModal}>
+            <span className="close-users" onClick={closeModal}>
               &times;
             </span>
             {/* Replace with actual form component when available */}
