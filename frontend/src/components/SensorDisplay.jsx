@@ -18,82 +18,37 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sensor, setSensor] = useState(inputSensor);
   const [sensorName, setSensorName] = useState(inputSensor.name);
-  const [rangeLow, setRangeLow] = useState(inputSensor.range_low);
-  const [rangeHigh, setRangeHigh] = useState(inputSensor.range_high);
+  const [CO2rangeLow, setCO2RangeLow] = useState(inputSensor.measures.CO2.range_low);
+  const [CO2rangeHigh, setCO2RangeHigh] = useState(inputSensor.measures.CO2.range_high);
+  const [DOrangeLow, setDORangeLow] = useState(inputSensor.measures.DO.range_low);
+  const [DOrangeHigh, setDORangeHigh] = useState(inputSensor.measures.DO.range_high);
   const [sensorValueCO2, setSensorValueCO2] = useState();
   const [sensorValueDO, setSensorValueDO] = useState();
-  const [readFrequency, setReadFrequency] = useState();
-  const [sensorData, setSensorData] = useState({ labels: [], datasets: [], });
-     /* {
-        label: 'Sensor Data',
-        data: [],
-        borderColor: 'rgba(75,192,192,1)',
-        backgroundColor: 'rgba(75,192,192,0.2)',
-        pointBackgroundColor: (context) => {          
-          const value = context.raw?.y;
-          if (value < rangeLow || value > rangeHigh) { // Highlight this point if value is 5
-            return 'red'; // Highlight color
-          }
-          return 'blue'; // Default color
-        },
-        pointBorderColor: (context) => {
-          const value = context.raw?.y;
-          if (value < rangeLow || value > rangeHigh) { // Highlight this point if value is 5
-            return 'red'; // Border color for highlighted point
-          }
-          return 'blue'; // Default border color
-        },
-        pointHoverBackgroundColor: 'yellow', // Hover effect for all points
-        pointHoverBorderColor: 'yellow', // Hover effect for all points
-        fill: true,
-        lineTension: 0.4,
-      },
-    ],
-  });*/
-  const [chartOptions, setChartOptions] = useState({});
+  const [CO2Data, setCO2Data] = useState({ labels: [], datasets: [], });
+  const [DOData, setDOData] = useState({ labels: [], datasets: [], });
+  const [CO2chartOptions, setCO2ChartOptions] = useState({});
+  const [DOchartOptions, setDOChartOptions] = useState({});
 
   // Web socket things
   useEffect(() => {
     setSensor(inputSensor);
-    setRangeLow(parseFloat(sensor.range_low))
-    setRangeHigh(parseFloat(sensor.range_high))
-    //fetchSettings();
-    setChartOptions({
-      scales: {
-        x: {
-          type: 'time',
-          time: {
-            unit: 'minute', // Change the time unit as needed
-          },
-          title: {
-            display: true,
-            text: 'Time',
-          },
-        },
-        y: {
-          min: parseFloat(sensor.range_low) - 2, // Set the minimum y-axis value
-          max: parseFloat(sensor.range_high) + 2, // Set the maximum y-axis value
-          ticks: {
-            callback: function(value) {
-              return value === 5 ? '5 - Target' : value;
-            }
-          },
-          title: {
-            display: true,
-            text: 'Value',
-          },
-        },
-      },
-      animation: false,
-    });
+    setCO2RangeLow(parseFloat(sensor.measures.CO2.range_low))
+    setCO2RangeHigh(parseFloat(sensor.measures.CO2.range_high))
+    setDORangeLow(parseFloat(sensor.measures.DO.range_low))
+    setDORangeHigh(parseFloat(sensor.measures.DO.range_high))
+    resetChartOptions( CO2rangeLow, CO2rangeHigh, DOrangeLow, DOrangeHigh );
     if (!socket) return;
     
     // Function to handle async fetch data packet and sensor data
     const fetchData = async () => {
       try {
         // Fetch the packet data and await its completion
+        const read_frequency = await fetchSettings();
         await fetchDataPacket();
-        const intervalId = setInterval(fetchSensorData, 5000);
+        while (read_frequency == 0) {
+          continue
+        }
+        const intervalId = setInterval(fetchSensorData, read_frequency);
         return () => {
           clearInterval(intervalId);
           socket.off("response");
@@ -108,8 +63,58 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
   const fetchSettings = async () => {
     const response = await fetch("http://127.0.0.1:5000/settings");
     const data = await response.json();
-    setReadFrequency(data.settings[0].read_frequency);
+    return data.settings[0].read_frequency * 1000
   };
+
+  const resetChartOptions = ( CO2L, CO2H, DOL, DOH ) => {
+    setCO2ChartOptions({
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'minute', // Change the time unit as needed
+          },
+          title: { display: true, text: 'Time',},
+        },
+        y: {
+          min: CO2L*0.5,
+          max: CO2H*1.5,
+          ticks: {
+            callback: function(value) {
+              if (value == CO2rangeLow) {
+                return `Low Range - ${value}`;
+              } else if (value == CO2rangeHigh) {
+                return `High Range - ${value}`;
+              } else {
+                return value;
+              }
+            }
+          },},},
+      animation: false,
+    });
+    setDOChartOptions({
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'minute',},
+          title: {display: true,text: 'Time',},
+        },
+        y: {
+          min: DOL*0.5,
+          max: DOH*1.5,
+          ticks: {
+            callback: function(value) {
+              if (value == DOrangeLow) {
+                return `Low Range - ${value}`;
+              } else if (value == DOrangeHigh) {
+                return `High Range - ${value}`;
+              } else {
+                return value;
+              }
+            }
+          },},},
+      animation: false,
+    });
+  }
 
   const fetchDataPacket = async () => {
     return new Promise(async (resolve, reject) => {
@@ -118,7 +123,6 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
     try {
       const sensor = inputSensor
       const sensor_id = sensor._id;
-      console.log(`packet-${sensorName}`)
       const packetData = await new Promise((resolve, reject) => {
         socket.emit("packet", { request: sensor_id });
         socket.once(`packet-${sensorName}`, (data) => {
@@ -126,46 +130,60 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
         });
       });
       const newData = packetData.packet_data || [];
+      const sensorKeys = Object.keys(newData);
+      const sensor1Key = sensorKeys[0];
+      const sensor2Key = sensorKeys[1];
 
-      setSensorData((prevData) => {
-        return {
-          datasets: [
-            ...prevData.datasets, // Keep previous datasets if any
-            ...Object.keys(newData).map((sensorKey) => {
-              const sensorData = newData[sensorKey];
-      
-              return {
-                label: sensorKey, // Set the label as the sensor name
-                data: sensorData.map((entry) => ({
-                  x: new Date(entry.time * 1000).toISOString(), // Format the timestamp
-                  y: entry.value // Use the value for y-axis
-                })),
-                borderColor: 'rgba(75,192,192,1)',
-                fill: true,
-                lineTension: 0.4,
-                pointBackgroundColor: (context) => {
-                  const value = context.raw?.y;
-                  if (value < rangeLow || value > rangeHigh) { // Highlight this point if value is out of range
-                    return 'red'; // Highlight color
-                  }
-                  return 'blue'; // Default color
-                },
-                pointBorderColor: (context) => {
-                  const value = context.raw?.y;
-                  if (value < rangeLow || value > rangeHigh) { // Highlight border color for out-of-range values
-                    return 'red'; // Border color for highlighted point
-                  }
-                  return 'blue'; // Default border color
-                },
-                pointHoverBackgroundColor: 'yellow', // Hover effect for all points
-                pointHoverBorderColor: 'yellow', // Hover effect for all points
-              };
-            }),
-          ],
-        };
-      });
-      // Optional: Reject the promise if there is an error with the socket event
-      // setTimeout(() => reject(new Error('Timeout waiting for data')), 5000); // 5-second timeout
+      const sensor1Data = newData[sensor1Key];
+      const sensor2Data = newData[sensor2Key];
+
+      setCO2Data(() => ({
+        datasets: [
+          {
+            label: sensor1Key,
+            data: sensor1Data.map((entry) => ({
+              x: new Date(entry.time * 1000).toISOString(),
+              y: entry.value,
+            })),
+            borderColor: 'rgba(75,192,192,1)',
+            lineTension: 0.4,
+            pointBackgroundColor: (context) => {
+              const value = context.raw?.y;
+              return value < CO2rangeLow || value > CO2rangeHigh ? 'red' : 'blue';
+            },
+            pointBorderColor: (context) => {
+              const value = context.raw?.y;
+              return value < CO2rangeLow || value > CO2rangeHigh ? 'red' : 'blue';
+            },
+            pointHoverBackgroundColor: 'yellow',
+            pointHoverBorderColor: 'yellow',
+          }
+        ]
+      }));
+
+      setDOData(() => ({
+        datasets: [
+          {
+            label: sensor2Key,
+            data: sensor2Data.map((entry) => ({
+              x: new Date(entry.time * 1000).toISOString(),
+              y: entry.value,
+            })),
+            borderColor: 'rgba(75,192,192,1)',
+            lineTension: 0.4,
+            pointBackgroundColor: (context) => {
+              const value = context.raw?.y;
+              return value < DOrangeLow || value > DOrangeHigh ? 'red' : 'blue';
+            },
+            pointBorderColor: (context) => {
+              const value = context.raw?.y;
+              return value < DOrangeLow || value > DOrangeHigh ? 'red' : 'blue';
+            },
+            pointHoverBackgroundColor: 'yellow',
+            pointHoverBorderColor: 'yellow',
+          }
+        ]
+      }));
     } catch (error) {
         console.error('Error fetching data:', error);
     } finally {
@@ -188,53 +206,94 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
       const newData = updateData.update_data;
       setSensorValueCO2(newData[`${sensorName}-CO2`].value);
       setSensorValueDO(newData[`${sensorName}-DO`].value);
-      setSensorData((prevData) => {
-        // Map over newData to format it
-        const updatedDatasets = Object.keys(newData).map((sensorKey) => {
-          const sensor = newData[sensorKey]; // Get the sensor data object for each key
+      let tempCO2 = newData[`${sensorName}-CO2`].value;
+      let tempDO = newData[`${sensorName}-DO`].value;
+      let num1, num2, num3, num4;
+      num1 = CO2rangeLow < tempCO2 ? CO2rangeLow : tempCO2;
+      num2 = CO2rangeHigh > tempCO2 ? CO2rangeHigh : tempCO2;
+      num3 = DOrangeLow < tempDO ? DOrangeLow : tempDO;
+      num4 = DOrangeHigh > tempDO ? DOrangeHigh : tempDO;
+      resetChartOptions(num1, num2, num3, num4);
+
+      const sensorKeys = Object.keys(newData);
+      const sensor1Key = sensorKeys[0];
+      const sensor2Key = sensorKeys[1];
+
+      const sensor1Data = newData[sensor1Key];
+      const sensor2Data = newData[sensor2Key];
+
+      setCO2Data((prevData) => {
+        const existingSensorData = prevData.datasets.find(
+          (dataset) => dataset.label === sensor1Key
+        );
       
-          // Check if this sensor already has data in the previous state
-          const existingSensorData = prevData.datasets.find(
-            (dataset) => dataset.label === sensorKey
-          );
-      
-          // Create the new data object with the new point
-          const newDataPoint = {
-            x: new Date(sensor.time * 1000).toISOString(), // Convert Unix timestamp to ISO format
-            y: sensor.value, // Measurement value for this sensor
-          };
-      
-          // If the sensor already has data, append the new point to the existing data
-          if (existingSensorData) {
-            existingSensorData.data.push(newDataPoint); // Append new data point
-            // Keep only the latest 20 data points
-            if (existingSensorData.data.length > 100) {
-              existingSensorData.data.shift(); // Remove the oldest entry
-            }
-            return existingSensorData;
-          } else {
-            // If the sensor is new, create a new dataset with the new data point
-            return {
-              label: sensorKey,
-              data: [newDataPoint],
-              borderColor: 'rgba(75,192,192,1)', // Customize colors as needed
-              backgroundColor: 'rgba(75,192,192,0.2)',
-              pointBackgroundColor: 'blue',
-              pointBorderColor: 'blue',
-              fill: true,
-              lineTension: 0.4,
-            };
-          }
-        });
-      
-        // Update the state with the new datasets, preserving previous ones and adding new data
-        return {
-          datasets: updatedDatasets,
+        const newDataPoint = {
+          x: new Date(sensor1Data.time * 1000).toISOString(),
+          y: sensor1Data.value,
         };
-      });
       
-      // Optional: Reject the promise if there is an error with the socket event
-      // setTimeout(() => reject(new Error('Timeout waiting for data')), 5000); // 5-second timeout
+        let updatedDatasets;
+      
+        if (existingSensorData) {
+          // Create a shallow copy of the datasets
+          updatedDatasets = prevData.datasets.map((dataset) => {
+            if (dataset.label === sensor1Key) {
+              const newData = [...dataset.data, newDataPoint];
+              if (newData.length > 100) newData.shift();
+              return { ...dataset, data: newData };
+            }
+            return dataset;
+          });
+        } else {
+          const newDataset = {
+            label: sensor1Key,
+            data: [newDataPoint],
+            borderColor: 'rgba(75,192,192,1)',
+            backgroundColor: 'rgba(75,192,192,0.2)',
+            pointBackgroundColor: 'blue',
+            pointBorderColor: 'blue',
+            lineTension: 0.4,
+          };
+          updatedDatasets = [...prevData.datasets, newDataset];
+        }
+        return { datasets: updatedDatasets };
+      });
+
+      setDOData((prevData) => {
+        const existingSensorData = prevData.datasets.find(
+          (dataset) => dataset.label === sensor2Key
+        );
+      
+        const newDataPoint = {
+          x: new Date(sensor2Data.time * 1000).toISOString(),
+          y: sensor2Data.value,
+        };
+      
+        let updatedDatasets;
+        if (existingSensorData) {
+          // Create a shallow copy of the datasets
+          updatedDatasets = prevData.datasets.map((dataset) => {
+            if (dataset.label === sensor1Key) {
+              const newData = [...dataset.data, newDataPoint];
+              if (newData.length > 100) newData.shift();
+              return { ...dataset, data: newData };
+            }
+            return dataset;
+          });
+        } else {
+          const newDataset = {
+            label: sensor2Key,
+            data: [newDataPoint],
+            borderColor: 'rgba(75,192,192,1)',
+            backgroundColor: 'rgba(75,192,192,0.2)',
+            pointBackgroundColor: 'blue',
+            pointBorderColor: 'blue',
+            lineTension: 0.4,
+          };
+          updatedDatasets = [...prevData.datasets, newDataset];
+        }
+        return { datasets: updatedDatasets };
+      }); 
     } catch (error) {
         console.error('Error fetching data:', error);
     }
@@ -281,28 +340,34 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
     <div>
       <h2>{sensorName} Sensor Data</h2>
       <table>
-        <thead>
-          <tr>
-            <th></th>
-            <th></th>
-          </tr>
-        </thead>
         <tbody>
           <tr>
             <tr>
             <td>CO2 Reading:</td>
-            <td>{sensorValueCO2 || "Loading..."}</td>
-            </tr>
-            <tr>
-            <td>DO Reading:</td>
-            <td>{sensorValueDO || "Loading..."}</td>
+            <td>{sensorValueCO2 || "..."}</td>
             </tr>
             <td>
               <Line
                 data={{
-                  datasets: sensorData.datasets, // Using the datasets from state
+                  datasets: CO2Data.datasets,
                 }}
-                options={ chartOptions }
+                options={ CO2chartOptions }
+              width={300}
+              height={150}
+            />
+            </td>
+          </tr>
+          <tr>
+            <tr>
+            <td>DO Reading:</td>
+            <td>{sensorValueDO || "..."}</td>
+            </tr>
+            <td>
+            <Line
+                data={{
+                  datasets: DOData.datasets,
+                }}
+                options={ DOchartOptions }
               width={300}
               height={150}
             />

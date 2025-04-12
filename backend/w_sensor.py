@@ -15,24 +15,27 @@ class Water_Sensor:
     
     # read data from sensor
     def read_data(self, measure) -> dict:
-       # try:
-        print(measure)
-        value = self.ser.readline()
-        valueInString=str(value, 'UTF-8')
-        print(valueInString)
-        data_wo_header = valueInString[5:]
-        data_entries = data_wo_header.split(",")
+        try:
+            waiting_for_read = True
+            while (waiting_for_read):
+                value = self.ser.readline()
+                valueInString=str(value, 'UTF-8')
+                print(valueInString)
+                data_wo_header = valueInString[5:]
+                data_entries = data_wo_header.split(",")
+                if len(data_entries) == 13:
+                    waiting_for_read = False
 
-        # Return 5th entry - the CO2 data
-        if measure == "CO2":
-            data = float(data_entries[3])
-        else:
-            data = float(data_entries[8])
-        print(data)    
-        return data
+            # Return 5th entry - the CO2 data
+            if measure == "CO2":
+                data = float(data_entries[3])
+            else:
+                data = float(data_entries[8])
+            print(data)    
+            return data
 
-        #except serial.SerialException as e:
-        #    print(f"Error reading data: {e}")
+        except serial.SerialException as e:
+            print(f"Error reading data: {e}")
 
     # connect to port
     def connect_port(self):

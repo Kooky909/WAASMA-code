@@ -12,26 +12,28 @@ function Analysis() {
   let isFetching = false;
   const [selectedTank, setSelectedTank] = useState('');
   const [selectedSensor, setSelectedSensor] = useState('');
+  const [selectedMeasure, setSelectedMeasure] = useState('');
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const [sensorData, setSensorData] = useState([]);
+  const [dataRatios, setDataRatios] = useState({});
 
   useEffect(() => {
     setSelectedTank("all");
     setSelectedSensor("all");
-    setStartDate("0");
-    setEndDate("0");
-    fetchFilteredData( "all", "all", "0", "0");
+    setSelectedSensor("all");
+    fetchFilteredData( "all", "all", "all", "0", "0");
   }, []);
 
-  const fetchFilteredData = async (selectedTank, selectedSensor, formattedStart, formattedEnd) => {
+  const fetchFilteredData = async (selectedTank, selectedSensor, selectedMeasure, formattedStart, formattedEnd) => {
     if (isFetching) return; // Prevent multiple fetches at the same time
     isFetching = true;
     try {
       const data = {
         selectedTank,
         selectedSensor,
+        selectedMeasure,
         formattedStart,
         formattedEnd
       }
@@ -48,6 +50,7 @@ function Analysis() {
       const sensorData = await response.json();
       const newData = sensorData.sensor_data;
       setSensorData(newData);
+      calculateRatios( newData );
       
       setChartData({
         datasets: Object.keys(newData).map((sensorName, index) => ({
@@ -80,23 +83,96 @@ function Analysis() {
     e.preventDefault()
     const formattedStart = startDate ? startDate.toISOString() : "0";
     const formattedEnd = endDate ? endDate.toISOString() : "0";
-    fetchFilteredData(selectedTank, selectedSensor, formattedStart, formattedEnd)
+    fetchFilteredData(selectedTank, selectedSensor, selectedMeasure, formattedStart, formattedEnd)
   }
 
-  function convertToCSV(data) {
-    const header = Object.keys(data[0]).join(",");  // Extracts the header from the first object
+  function calculateRatios( sensorData ) {
+    // Dynamically extract values for each sensor type
+    const sensorValues = {};
+    for (let sensor in sensorData) {
+      // For each sensor, extract the values and store them in sensorValues object
+      sensorValues[sensor] = sensorData[sensor].map(entry => entry.value);
+    }
+    // Calculate the average
+    const sensorAverages = {};
+    for (let sensor in sensorValues) {
+      sensorAverages[sensor] = calculateAverage(sensorValues[sensor]);
+    }
+    // Calculate and set the ratios
+    const ratios = {};
+    for (let sensor1 in sensorAverages) {
+      for (let sensor2 in sensorAverages) {
+        if (sensor1 != sensor2 && sensor1.slice(0, -4) == sensor2.slice(0, -3)) {
+          ratios[sensor1.slice(0, -4)] = sensorAverages[sensor1] / sensorAverages[sensor2]
+        }
+      }
+    }
+    setDataRatios(ratios);
+  }
+
+  // Function to calculate the average value from an array of objects with `value` properties
+  const calculateAverage = (arr) => {
+    if (arr.length === 0) return 0;
+    let sum = 0;
+    for (let i = 0; i < arr.length; i++) {
+      sum = sum + arr[i];
+    }
+    return sum / arr.length;
+  };
+
+  function convertToCSV(flatData) {
+    /*const header = Object.keys(data[0]).join(",");  // Extracts the header from the first object
     const rows = data.map(item => Object.values(item).join(",")); // Maps data to CSV rows
-    
-    return [header, ...rows].join("\n"); // Combine the header with rows
+    return [header, ...rows].join("\n"); // Combine the header with rows*/
+
+    // Round time to the second
+    const roundToSecond = (timestamp) => {
+      return new Date(Math.floor(new Date(timestamp).getTime() / 1000) * 1000);
+    };
+
+    // Create a dictionary where the key is the rounded time and the value is an object with sensor values
+    const groupedData = {};
+    flatData.forEach(entry => {
+      const roundedTime = roundToSecond(entry.time).toISOString();
+      
+      // If the time doesn't exist in the dictionary, create a new object for that time
+      if (!groupedData[roundedTime]) {
+        groupedData[roundedTime] = {};
+      }
+
+      // Add the sensor value for the current time
+      groupedData[roundedTime][entry.name] = entry.value;
+    });
+
+    // Now, create the CSV rows
+    const headers = ['time', ...new Set(flatData.map(entry => entry.name))];  // Unique sensor names
+    const rows = [];
+
+    // For each unique time, create a row in the CSV
+    Object.keys(groupedData).forEach(time => {
+      const row = [time];
+      headers.slice(1).forEach(sensorName => {
+        row.push(groupedData[time][sensorName] || ''); // Add value or empty if no data
+      });
+      rows.push(row);
+    });
+
+    // Convert to CSV format
+    const csv = [
+      headers.join(','), // Add the header row
+      ...rows.map(row => row.join(',')) // Add each data row
+    ].join('\n');
+
+    return csv;
   }
 
   const downloadCSV = () => {
-    /*if (!chartData || chartData.length === 0) {
+    if (!chartData || chartData.length === 0) {
       alert("No data available to download.");
       return;
-    }*/
-  
+    }
     console.log(sensorData)
+  
     const flatData = [];
     for (const [sensorName, readings] of Object.entries(sensorData)) {
       readings.forEach(entry => {
@@ -109,7 +185,7 @@ function Analysis() {
         });
       });
     }
-
+    console.log(flatData)
     const csvContent = convertToCSV(flatData);
  
     // Create Blob and trigger download
@@ -137,7 +213,7 @@ function Analysis() {
       <form onSubmit={onSubmit} className="filter-bar">
         <div className="filter-group">
           <div className="filter-item">
-            <label htmlFor="tankSelect">Select Tanks:</label>
+            <label htmlFor="tankSelect">Select Tank:</label>
             <select id="tankSelect" value={selectedTank} onChange={(e) => setSelectedTank(e.target.value)}>
               <option value="all">All Tanks</option>
               <option value="1">Tank 1</option>
@@ -146,12 +222,20 @@ function Analysis() {
           </div>
   
           <div className="filter-item">
-            <label htmlFor="sensorSelect">Select Sensors:</label>
+            <label htmlFor="sensorSelect">Select Sensor:</label>
             <select id="sensorSelect" value={selectedSensor} onChange={(e) => setSelectedSensor(e.target.value)}>
               <option value="all">All Sensors</option>
-              <option value="Water">Water Quality</option>
-              <option value="Air">Air Quality</option>
-              <option value="Pressure">Pressure</option>
+              <option value="water">Water Quality</option>
+              <option value="air">Air Quality</option>
+            </select>
+          </div>
+
+          <div className="filter-item">
+            <label htmlFor="measureSelect">Select Measure:</label>
+            <select id="measureSelect" value={selectedMeasure} onChange={(e) => setSelectedMeasure(e.target.value)}>
+              <option value="all">All Measures</option>
+              <option value="CO2">CO2</option>
+              <option value="DO">DO</option>
             </select>
           </div>
   
@@ -168,7 +252,7 @@ function Analysis() {
               endDate={endDate}
               selectsRange
               isClearable
-              placeholderText="Select a date range"
+              placeholderText="Select a date"
             />
           </div>
   
@@ -202,7 +286,15 @@ function Analysis() {
           }}
         />
         <button onClick={() => downloadCSV(chartData)} className="download-CSV">Download Data</button>
-        <p>Ratio of CO2 in water to CO2 in air:</p>
+        <p>Ratio of CO2 to O2:</p>
+        <div>
+          {Object.entries(dataRatios).map(([ratio, value]) => (
+            <div>
+              <h3>{ratio}</h3>
+              <p>{value}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

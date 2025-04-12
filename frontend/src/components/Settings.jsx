@@ -10,6 +10,7 @@ function Settings() {
   const [settingsId, setSettingsId] = useState("");
   const [systemState, setSystemState] = useState("");
   const [runNumber, setRunNumber] = useState("");
+  const [startDate, setStartDate] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentValue, setCurrentValue] = useState({})
 
@@ -24,6 +25,9 @@ function Settings() {
     setSettingsId(data.settings[0]._id);
     setSystemState(data.settings[0].system_state)
     setRunNumber(data.settings[0].run_number)
+    const mongoDate = data.settings[0].start_date;
+    let date = new Date(mongoDate["$date"]);
+    setStartDate(date.toLocaleString())
   };
 
   // Function to handle button click
@@ -88,7 +92,7 @@ function Settings() {
             <tbody>
               <tr>
                 <td> Frequency of Data Reading: </td>
-                <td> Every {readFrequency} Minutes</td>
+                <td>{readFrequency} Seconds</td>
                 <td>
                 <button onClick={() => openEditModal()}>
                     Update
@@ -111,6 +115,10 @@ function Settings() {
               <tr>
                 <td> Current Run Number: </td>
                 <td>{runNumber}</td>
+              </tr>
+              <tr>
+                <td> Run Start Date: </td>
+                <td>{startDate}</td>
               </tr>
               
             </tbody>

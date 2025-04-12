@@ -16,8 +16,7 @@ function Home() {
   const typeOrder = ["water", "air"]; // Define the order
 
   const socket = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
-  const [backendReady, setBackendReady] = useState(true); 
-  const [readFrequency, setReadFrequency] = useState();
+  const [backendReady, setBackendReady] = useState(true);
 
   useEffect(() => {
     fetchSensors();
@@ -81,15 +80,6 @@ function Home() {
     return true
   };
 
-  const fetchSettings = async () => {
-    const response = await fetch("http://127.0.0.1:5000/settings");
-    const data = await response.json();
-    setReadFrequency(data.settings[0].read_frequency);
-    while (readFrequency === undefined) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
-    }
-  };
-
   const handleFormSubmit = async () => {
     // Fetch or trigger a function to refresh data after form submission
     // You can re-fetch the data here or perform any other necessary action
@@ -135,7 +125,7 @@ function Home() {
             {activeTab === 'home' && (
               <div className="tab-content home">
                 <h2>Home</h2>
-                <HomeDisplay readFrequency1={readFrequency}/>
+                <HomeDisplay />
               </div>
             )}
             {activeTab === 'tank1' && (

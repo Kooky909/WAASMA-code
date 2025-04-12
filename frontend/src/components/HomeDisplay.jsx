@@ -7,12 +7,11 @@ import { WebSocketContext } from "./WebSocketProvider";
 // Register required Chart.js components
 ChartJS.register(CategoryScale, LinearScale, TimeScale, Title, Tooltip, Legend, Filler);
 
-const HomeDisplay = ({ readFrequency1 }) => {
+const HomeDisplay = ({ }) => {
   const socket = useContext(WebSocketContext);
   const [sensors, setSensors] = useState({ labels: [], datasets: [] });
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const [chartOptions, setChartOptions] = useState({});
-  //const [readFrequency, setReadFrequency] = useState();
 
   // Web socket things
   useEffect(() => {
@@ -22,9 +21,12 @@ const HomeDisplay = ({ readFrequency1 }) => {
     const fetchData = async () => {
       try {
         // Fetch the packet data and await its completion
-        //await fetchSettings();
+        const read_frequency = await fetchSettings();
         await fetchDataPacket();
-        const intervalId = setInterval(fetchSensorData, 5000);
+        while (read_frequency == 0) {
+          continue
+        }
+        const intervalId = setInterval(fetchSensorData, read_frequency);
         return () => {
           clearInterval(intervalId);
           socket.off("response");
@@ -37,14 +39,11 @@ const HomeDisplay = ({ readFrequency1 }) => {
     fetchSensors();
   }, [socket]);
 
-  /*const fetchSettings = async () => {
+  const fetchSettings = async () => {
     const response = await fetch("http://127.0.0.1:5000/settings");
     const data = await response.json();
-    setReadFrequency(data.settings[0].read_frequency);
-    while (readFrequency === undefined) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
-    }
-  };*/
+    return data.settings[0].read_frequency * 1000
+  };
 
   const fetchSensors = async () => {
     const response = await fetch("http://127.0.0.1:5000/sensors");
@@ -90,8 +89,6 @@ const HomeDisplay = ({ readFrequency1 }) => {
             },
           },
           y: {
-            min: 0,
-            max: 60,
             ticks: {
               callback: function(value) {
                 return value === 5 ? '5 - Target' : value;
@@ -124,7 +121,6 @@ const HomeDisplay = ({ readFrequency1 }) => {
           resolve(data.update_data); // Resolve promise when data is received
         });
       });
-      console.log(updateData)
       setChartData((prevData) => ({
         datasets: Object.keys(updateData).map((sensor, index) => {
           // Find existing dataset for this sensor

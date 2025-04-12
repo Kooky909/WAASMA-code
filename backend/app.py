@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify, abort
 from functools import wraps
 import json
+import os
 from bson import json_util, ObjectId
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from sys_state import Sys_State
+import time
 from datetime import datetime, timedelta
 from db_config import user_collection, sensor_collection, settings_collection
 
@@ -74,6 +76,11 @@ class Flask_App():
                     {},  # Empty query to target the first (and only) document
                     {'$set': {'system_state': 'running'}}  # Set 'system_state' to 'running'
                 )
+                # update start date
+                settings_collection.update_one(
+                    {},  # Empty query to target the first (and only) document
+                    {'$set': {'start_date': datetime.now()}}  # Set 'system_state' to 'running'
+                )
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
             return jsonify({"message": "Sensors Configured!"}), 201
@@ -88,8 +95,20 @@ class Flask_App():
                 return jsonify({"message": "Sensor not found"}), 404
 
             data = request.json
+            updated_data = {
+                "measures": {
+                    "CO2": {
+                        "range_low": data["CO2_range_low"],
+                        "range_high": data["CO2_range_high"]
+                    },
+                    "DO": {
+                        "range_low": data["DO_range_low"],
+                        "range_high": data["DO_range_high"]
+                    }
+                }
+            }
             try:
-                update = {"$set": data}  # Use $set to update the specified fields
+                update = {"$set": updated_data}  # Use $set to update the specified fields
                 sensor_collection.update_one(sensor_id, update)
                 # Flip the flag
                 self.state.set("New Settings", True)
@@ -108,12 +127,12 @@ class Flask_App():
                 if frequency is None:
                     return jsonify({"message": "Frequency is required"}), 400
 
-                # Assuming you have a collection to store settings
-                # and that you want to update the frequency field
+                # updating the frequency in the db
                 setting_id = {"_id": ObjectId(id)}
-                update = {"$set": {"read_frequency": int(frequency)*60}}
+                update = {"$set": {"read_frequency": int(frequency)}}
                 settings_collection.update_one(setting_id, update)
-                self.state.set("Read Frequency", int(frequency)*60)
+                self.state.set("Read Frequency", int(frequency))
+                print("frequency has been updated")
 
                 return jsonify({"message": "Sensor range updated."}), 200
             except Exception as e:
@@ -124,7 +143,7 @@ class Flask_App():
         #@require_role(["admin", "operator"])
         def stop_run():
             data = request.json
-            setting_id = data.get('setting_id')
+            setting_id = ObjectId(data.get('setting_id'))
             # change db system state to waiting
             update = {"$set": {"system_state": "waiting"}}
             settings_collection.update_one({"_id": setting_id}, update) #using test sensor collection as an example. change as needed.
@@ -138,6 +157,7 @@ class Flask_App():
             update = {"$set": {"run_number": current_run_number+1}}
             settings_collection.update_one({"_id": setting_id}, update)
             print("run has been stopped")
+            print(self.state.get("terminate"))
             return jsonify({"message": "Run has been stopped"}), 200            
 
         ####################################################################
@@ -146,35 +166,38 @@ class Flask_App():
 
         @self.app.route("/analysis_query/", methods=["POST"])
         def analysis_query():
-            filters = request.json
+            filters = request.json     # Get the filters
             tankFilter = filters.get("selectedTank").strip()
             sensorFilter = filters.get("selectedSensor").strip()
+            measureFilter = filters.get("selectedMeasure").strip()
             startDateFilter = filters.get("formattedStart").strip()
             endDateFilter = filters.get("formattedEnd").strip()
-
             print(tankFilter, sensorFilter, startDateFilter, endDateFilter)
 
-            if tankFilter == "all" and sensorFilter == "all":
+            if tankFilter == "all" and sensorFilter == "all":     # Get sensor id list based on filters
                 sensor_ids_cursor = sensor_collection.find({}, {"_id": 1})
             elif tankFilter == "all":
                 sensor_ids_cursor = sensor_collection.find({"type": filters.get("selectedSensor")}, {"_id": 1})
             elif sensorFilter == "all":
-                sensor_ids_cursor = sensor_collection.find({"tank": filters.get("selectedTank")}, {"_id": 1})
+                sensor_ids_cursor = sensor_collection.find({"tank": int(filters.get("selectedTank"))}, {"_id": 1})
             else:
-                sensor_ids_cursor = sensor_collection.find({"tank": filters.get("selectedTank"), "type": filters.get("selectedSensor")}, {"_id": 1})
+                sensor_ids_cursor = sensor_collection.find({"tank": int(filters.get("selectedTank")), "type": filters.get("selectedSensor")}, {"_id": 1})
 
             sensor_ids_list = list(sensor_ids_cursor)
             sensor_ids = [sensor['_id'] for sensor in sensor_ids_list]
+            print(sensor_ids)
 
             result_data = {}
             Sensor_List = self.state.get("Sensor List")
             for sensor in sensor_ids:
                 for sensor_id, sensor_data in Sensor_List.items():
-                    if sensor == sensor_id:
+                    if sensor == sensor_data["id"] and ( measureFilter == "all" or sensor_data["measure"] == measureFilter ):
                         collection = sensor_data["db"]
                         if startDateFilter == "0" and endDateFilter == "0":
-                            tempDateFilter = datetime.strptime("2025-03-17T04:00:00.000Z", "%Y-%m-%dT%H:%M:%S.%fZ")
-                            measurements_cursor = collection.find({"time": {"$gte": tempDateFilter}})
+                            # Get start data
+                            settings = settings_collection.find_one()
+                            start_date = settings['start_date']
+                            measurements_cursor = collection.find({"time": {"$gte": start_date}})
                         elif endDateFilter == "0":
                             tempEndFilter = startDateFilter[:11] + "23:59:59.999Z"
                             startDate = datetime.strptime(startDateFilter, "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -186,7 +209,7 @@ class Flask_App():
                             measurements_cursor = collection.find({"time": {"$gte": startDate, "$lt": endDate}})
                         measurements_list = list(measurements_cursor)
                         if measurements_list:
-                            result_data[sensor_data["name"]] = measurements_list
+                            result_data[sensor_id] = measurements_list
 
             json_data = json.loads(json_util.dumps(result_data))
             return jsonify({"sensor_data": json_data})
@@ -328,6 +351,9 @@ class Flask_App():
             if client_request == "home":
                 for sensor_id, sensor_data in Sensor_List.items():
                     formatted_readings = []
+                    while "recent readings" not in sensor_data or not sensor_data["recent readings"]:
+                        print("Waiting for recent readings...")
+                        time.sleep(1)  # Wait 1 second before checking again
                     for reading in sensor_data["recent readings"]:
                         formatted_readings.append({
                             "time": reading["time"],
@@ -335,6 +361,7 @@ class Flask_App():
                         })
 
                     newData[sensor_id] = formatted_readings # Store in the newData w/ sensor name
+                print(newData)
                 emit('packet_home', {"packet_data": newData}, broadcast=True)
             else:
                 all_measurements = {}
@@ -342,6 +369,9 @@ class Flask_App():
                     if str(sensor_data["id"]) == client_request:
                         sensor_name = sensor_data["name"]  # Get the sensor name
                         formatted_readings = []
+                        while "recent readings" not in sensor_data or not sensor_data["recent readings"]:
+                            print("Waiting for recent readings...")
+                            time.sleep(1)  # Wait 1 second before checking again
                         for reading in sensor_data["recent readings"]:
                             formatted_readings.append({
                                 "time": reading["time"],
@@ -362,6 +392,9 @@ class Flask_App():
             if client_request == "home":
                 for sensor_id, sensor_data in Sensor_List.items():
                     sensor_name = sensor_data["name"]  # Get the sensor name
+                    while "current reading" not in sensor_data or not sensor_data["current reading"]:
+                        print("Waiting for current reading...")
+                        time.sleep(1)  # Delay to avoid tight loop
                     reading = sensor_data["current reading"]
                     newData[sensor_id] = ({
                         "time": reading["time"],
@@ -373,6 +406,9 @@ class Flask_App():
                 for sensor_name_measure, sensor_data in Sensor_List.items():
                     if str(sensor_data["id"]) == client_request:
                         sensor_name = sensor_data["name"]  # Get the sensor name
+                        while "current reading" not in sensor_data or not sensor_data["current reading"]:
+                            print("Waiting for current reading...")
+                            time.sleep(1)  # Delay to avoid tight loop
                         all_readings[sensor_name_measure] = sensor_data["current reading"]
                 update = f"update-{sensor_name}"
                 emit(update, {"update_data": all_readings}, broadcast=True)
@@ -388,6 +424,17 @@ class Flask_App():
                 client_connect.clients.discard(sid)
 
             print(f"Remaining clients: {len(client_connect.clients)}")
+
+
+        # Method to shutdown the server
+        @self.app.route('/shutdown', methods=['POST'])
+        def shutdown():
+            def stop_server():
+                print("Server is shutting down...")
+                os._exit(0)  # Forcefully terminate the process
+
+            self.socketio.start_background_task(stop_server)
+            return 'Server shutting down...', 200
 
     # Method to run the app - used in main
     def run_app(self):

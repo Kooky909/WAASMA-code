@@ -1,6 +1,5 @@
 from w_sensor import Water_Sensor
 from a_sensor import Air_Sensor
-from p_sensor import Pressure_Sensor
 from db_config import db, user_collection, sensor_collection, settings_collection
 from flask import jsonify
 import json
@@ -14,6 +13,7 @@ from mail_server import mail_server
 from sys_state import Sys_State
 from random_test_sensor import Random_Test_Sensor
 from pymongo import MongoClient
+import requests
 
 #----------------------------------------------------------------------------------------
 #   Entry Point for the Aqualb Sensor system
@@ -104,6 +104,10 @@ def main():
         db_settings_cursor = settings_collection.find()
         db_settings_list = list(db_settings_cursor)
         system_state.set("state", db_settings_list[0]['system_state'])
+
+
+    # Get and set the read frequency
+    system_state.set("Read Frequency", db_settings_list[0]['read_frequency'])
 
     # initialize mail server
     mail_thread = threading.Thread(target=mail_init, args=[system_state])
@@ -218,12 +222,17 @@ def main():
             system_state.set("New Settings", False) # Reset 'New Settings'
 
     # end main state while
+    print(system_state.get("terminate"))
+    
+    stop_flask()   # Stop flask server
 
     # Join all threads
     app_thread.join()
     mail_thread.join()
     for thread in sensor_threads:
         thread.join()
+
+    
 
     print("all threads closed")
     # ends program
@@ -342,6 +351,13 @@ def app_init(state):
     my_app = Flask_App(state)
     my_app.run_app()
     pass
+
+#   Stop the Flask App
+def stop_flask():
+    try:
+        requests.post("http://localhost:5000/shutdown")
+    except requests.exceptions.ConnectionError:
+        print("Flask server already stopped or not reachable.")
 
 #   Create mail server and hand it execution on this thread.
 def mail_init(state):

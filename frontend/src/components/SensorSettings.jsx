@@ -53,7 +53,8 @@ const SensorSettings = () => {
                 <th>Tank #</th>
                 <th>Communication</th>
                 <th>Baud Rate</th>
-                <th>Range</th>
+                <th>Range - CO2</th>
+                <th>Range - DO</th>
               </tr>
             </thead>
             <tbody>
@@ -63,7 +64,8 @@ const SensorSettings = () => {
                   <td>{sensor.tank}</td>
                   <td>{sensor.connection}</td>
                   <td>{sensor.baud_rate}</td>
-                  <td>{`${sensor.range_low}-${sensor.range_high}`}</td>
+                  <td>{`${sensor.measures.CO2.range_low}-${sensor.measures.CO2.range_high}`}</td>
+                  <td>{`${sensor.measures.DO.range_low}-${sensor.measures.DO.range_high}`}</td>
                   <td>
                     <button className="change-range-btn" onClick={() => openEditModal(sensor)}>
                       Change Range
