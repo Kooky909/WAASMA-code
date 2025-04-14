@@ -124,7 +124,7 @@ function Home() {
           <section>
             {activeTab === 'home' && (
               <div className="tab-content home">
-                <h2>Home</h2>
+                <h2>All Sensor Data</h2>
                 <HomeDisplay />
               </div>
             )}

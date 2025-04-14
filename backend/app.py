@@ -323,17 +323,17 @@ class Flask_App():
         # --- WebSocket Connection ---
         @self.socketio.on('connect')
         def client_connect():
-            print("Client connected via WebSocket")
+            #print("Client connected via WebSocket")
             client_ip = request.remote_addr
             sid = request.sid
             print(f"🔵 New WebSocket Connection Attempt: {sid} from {client_ip}")
 
             # Store connected clients if needed (for debugging)
-            if not hasattr(client_connect, "clients"):
-                client_connect.clients = set()
-            client_connect.clients.add(sid)
+            #if not hasattr(client_connect, "clients"):
+            #    client_connect.clients = set()
+            #client_connect.clients.add(sid)
 
-            print(f"Currently connected clients: {len(client_connect.clients)}")
+            #print(f"Currently connected clients: {len(client_connect.clients)}")
 
         @self.socketio.on('message')
         def client_message(data):
@@ -360,8 +360,7 @@ class Flask_App():
                             "value": reading["value"]
                         })
 
-                    newData[sensor_id] = formatted_readings # Store in the newData w/ sensor name
-                print(newData)
+                    newData[sensor_id] = formatted_readings # Store in the newData w/ sensor name        
                 emit('packet_home', {"packet_data": newData}, broadcast=True)
             else:
                 all_measurements = {}
@@ -411,19 +410,20 @@ class Flask_App():
                             time.sleep(1)  # Delay to avoid tight loop
                         all_readings[sensor_name_measure] = sensor_data["current reading"]
                 update = f"update-{sensor_name}"
+                print("update name:", update)
                 emit(update, {"update_data": all_readings}, broadcast=True)
 
         @self.socketio.on('disconnect')
         def client_disconnect():
-            print("Client disconnected from WebSocket")
+            #print("Client disconnected from WebSocket")
             sid = request.sid
             print(f"🔴 Client disconnected: {sid}")
 
             # Remove client from set
-            if hasattr(client_connect, "clients"):
-                client_connect.clients.discard(sid)
+            #if hasattr(client_connect, "clients"):
+            #    client_connect.clients.discard(sid)
 
-            print(f"Remaining clients: {len(client_connect.clients)}")
+            #print(f"Remaining clients: {len(client_connect.clients)}")
 
 
         # Method to shutdown the server

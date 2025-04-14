@@ -89,14 +89,9 @@ const HomeDisplay = ({ }) => {
             },
           },
           y: {
-            ticks: {
-              callback: function(value) {
-                return value === 5 ? '5 - Target' : value;
-              }
-            },
             title: {
               display: true,
-              text: 'Value',
+              text: 'Sensor Values',
             },
           },
         },
