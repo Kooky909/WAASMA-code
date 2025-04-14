@@ -55,55 +55,64 @@ const ChangeRangeForm = ({ sensorChange = {}, updateCallback }) => {
 
     return (
         <form onSubmit={onSubmit}>
+          <table>
+            <tbody>
           <div>
-            <label htmlFor="CO2">CO2 Range:</label>
+            <tr><label htmlFor="CO2">CO2 Range:</label></tr>
+            <tr>
+              
               <div>
-                <label htmlFor="range_low">Low:</label>
-                <input
+                <td><label htmlFor="range_low">Low:</label></td>
+                <td><input
                   type="text"
                   id="CO2_range_low"
                   value={CO2_range_low}
                   onChange={(e) => setCO2RangeLow(e.target.value)}
-                />
+                /></td>
                 </div>
                 <div>
-                  <label htmlFor="range_high">High:</label>
-                  <input
+                <td><label htmlFor="range_high">High:</label></td>
+                <td><input
                     type="text"
                     id="CO2_range_high"
                     value={CO2_range_high}
                     onChange={(e) => setCO2RangeHigh(e.target.value)}
-                  />
+                  /></td>
                 </div>
+                </tr>
           </div>
           <div>
-            <label htmlFor="CO2">DO Range:</label>
+          <tr><label htmlFor="DO">DO Range:</label></tr>
+          <tr>
               <div>
-                <label htmlFor="range_low">Low:</label>
-                <input
+                <td><label htmlFor="range_low">Low:</label></td>
+                <td><input
                   type="text"
                   id="DO_range_low"
                   value={DO_range_low}
                   onChange={(e) => setDORangeLow(e.target.value)}
-                />
+                /></td>
               </div>
               <div>
-                <label htmlFor="range_high">High:</label>
-                <input
+              <td><label htmlFor="range_high">High:</label></td>
+              <td><input
                   type="text"
                   id="DO_range_high"
                   value={DO_range_high}
                   onChange={(e) => setDORangeHigh(e.target.value)}
-                />
+                /></td>
               </div>
+            </tr>  
           </div>
-
+          <tr>
             <button type="submit">{"Update"}</button>
             {message && (
                 <p style = {{ color: messageType === "error" ? "red" : "green"}}>
                     {message}
                 </p>
-            )}
+            )}</tr>
+            </tbody>
+          </table>
         </form>
     );
 };

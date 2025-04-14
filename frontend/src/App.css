@@ -1,25 +1,25 @@
 .modal {
     position: fixed;
     z-index: 1;
-    /*left: 0;
-    top: 0;*/
-    /*width: 400px;*/
-    height: 200px;
-    overflow: auto;
-    background-color: #333;
+    width: 400px;
+    height: 450px;
+    overflow: hidden;
+    background-color: rgba(200, 220, 235, 0.5);
+    padding: 0px;
 }
 .modal-content {
     background-color: white;
     border-radius: 8px;
     padding: 20px;
-    width: 1000px; /* Set a smaller fixed width */
-    max-width: 100%; /* Ensure it doesn't exceed 80% of the viewport */
+    /*width: 1000px;*/
+    /*max-width: 100%;*/
     text-align: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     position: relative;
 }
+
 .close {
-    color: #aaa;
+    color: rgba(200, 220, 235, 0.5);
     float: right;
     font-size: 28px;
     font-weight: bold;

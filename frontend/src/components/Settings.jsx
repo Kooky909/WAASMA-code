@@ -86,7 +86,7 @@ function Settings() {
     <>
       <SensorSettings/>
       <div class="data-section">
-        <h3>Data Settings</h3>
+        <h2>DATA SETTINGS</h2>
         <div className="data-setting">
         <table>
             <tbody>

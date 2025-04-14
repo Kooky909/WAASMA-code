@@ -71,7 +71,7 @@ const EditUserSettingsForm = ({ currentUser = {}, updateCallback }) => {
                     onChange={(e) => setRole(e.target.value)}
                 />
             </div>
-            <button type="submit">Update</button>
+            <button className="update-my-settings" type="submit">Update</button>
         </form>
     );
 };

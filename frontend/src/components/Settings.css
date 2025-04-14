@@ -5,13 +5,12 @@
   margin: 20px;
   padding: 20px;
   background-color: #d0d9f0;
-  border-radius: 8px;
 }
   
-.data-section h3 {
-  text-align: center;
+.data-section h2 {
+  font-size: 24px;
   color: #333;
-  font-size: 1.8rem;
+  margin-bottom: 20px;
   background-color: #d0d9f0;
 }
 .data-setting {

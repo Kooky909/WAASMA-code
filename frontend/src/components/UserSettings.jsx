@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
-
-/* Uncomment if EditUserSettingsForm is available */
-// import EditUserSettingsForm from "./EditUserSettingsForm";
+import EditUserSettingsForm from "./EditUserSettingsForm";
 import "./UsersStyles.css";
 
 const UserSettings = () => {
@@ -54,7 +52,7 @@ const UserSettings = () => {
 
   return (
     <div className="user-settings-container">
-      <h2 className="user-settings-title">MY USER SETTINGS</h2>
+      <h2 className="user-settings-title">My User Settings:</h2>
       <table className="user-settings-table">
         <tbody>
           <tr className="user-settings-row">
@@ -79,6 +77,7 @@ const UserSettings = () => {
           </tr>
         </tbody>
       </table>
+      <br />
       <button className="user-settings-edit-button" onClick={openEditModal}>
         Edit Settings
       </button>
@@ -88,9 +87,7 @@ const UserSettings = () => {
             <span className="close-users" onClick={closeModal}>
               &times;
             </span>
-            {/* Replace with actual form component when available */}
-            {/* <EditUserSettingsForm currentUser={userSettings} updateCallback={onUpdate} /> */}
-            <p>Form to edit settings goes here!</p>
+            {<EditUserSettingsForm currentUser={userSettings} updateCallback={onUpdate} /> }
           </div>
         </div>
       )}

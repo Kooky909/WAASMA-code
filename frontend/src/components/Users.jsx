@@ -50,7 +50,7 @@ function Users() {
         <h1>Manage Users</h1>
         <UserSettings />
       </header>
-
+      <br />
       <main className="users-main">
         <UserList
           users={users}

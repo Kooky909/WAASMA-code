@@ -116,15 +116,16 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
 
   return (
     <form onSubmit={onSubmit} className="config-sensor-form">
+      <table>
       <div>
           <h2> Configure Sensors </h2>
           <p> You must configure sensors to begin system run.</p>
       </div>
       <br />
-
+      <tr>
       <div>
-        <label htmlFor="numTanks">Enter number of desired tanks:</label>
-        <input
+        <td><label htmlFor="numTanks">Enter number of desired tanks:</label></td>
+        <td><input
           type="number"
           id="numTanks"
           value={numTanks}
@@ -132,13 +133,13 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
           min="1"
           max="2"
           required
-        />
+        /></td>
       </div>
-      <br />
-
+      </tr>
+      <tr>
       <div>
-        <label htmlFor="numSensors">Enter number of sensors per tank:</label>
-        <input
+      <td><label htmlFor="numSensors">Enter number of sensors per tank:</label></td>
+      <td><input
           type="number"
           id="numSensors"
           value={numSensors}
@@ -146,25 +147,25 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
           min="1"
           max="3"
           required
-        />
+        /></td>
       </div>
+      </tr>
       <br />
+      </table>
 
       {/* Render each tank configuration based on the numTanks value */}
       {[...Array(numTanks)].map((_, tankIndex) => (
         <div className="tank-config" key={tankIndex}>
           <h3>{`Tank ${tankIndex + 1}`}</h3>
-
+          <table>
+            <tr>
           {[...Array(numSensors)].map((_, sensorIndex) => (
             <div className="sensor-config" key={sensorIndex}>
               {/* Sensor configuration fields*/}
-
-              <table>
+                <td><h2>{`Sensor ${sensorIndex + 1}`}</h2></td>
+                <td>
                 <tr>
-                  <h4>{`Sensor ${sensorIndex + 1}`}</h4>
-                </tr>
-                <tr>
-                  <td><label htmlFor={`name-${tankIndex}-${sensorIndex}`}> Sensor Name:</label></td>
+                  <td><label htmlFor={`name-${tankIndex}-${sensorIndex}`}> Name:</label></td>
                   <td><input
                     type="text"
                     id={`name-${tankIndex}-${sensorIndex}`}
@@ -177,7 +178,7 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
                 </tr>
 
                 <tr>
-                  <td><label htmlFor={`type-${tankIndex}-${sensorIndex}`}>Sensor Type:</label></td>
+                  <td><label htmlFor={`type-${tankIndex}-${sensorIndex}`}>Type:</label></td>
                   <td> <select id={`type-${tankIndex}-${sensorIndex}`}
                   value={sensorData[tankIndex]?.[sensorIndex]?.type}
                   onChange={(e) =>
@@ -212,47 +213,48 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
                 }
                 /></td>
                 </tr>
-
                 {/* CO2 high/low ranges */}
                 <tr>
-                  <td><label htmlFor={`range_low_CO2-${tankIndex}-${sensorIndex}`}>CO2 Range - Low:</label></td>
+                  <td><label>CO2 Range - </label></td>
+                  <tr>
+                  <td><label htmlFor={`range_low_CO2-${tankIndex}-${sensorIndex}`}>Low:</label></td>
                   <td><input
-                type="number"
-                id={`range_low_CO2-${tankIndex}-${sensorIndex}`}
-                value={sensorData[tankIndex]?.[sensorIndex]?.range_low_CO2|| ""}
-                onChange={(e) =>
-                  handleInputChange(tankIndex, sensorIndex, "range_low_CO2", e.target.value)
-                }
-                /></td>
-                </tr>
+                    type="number"
+                    id={`range_low_CO2-${tankIndex}-${sensorIndex}`}
+                    value={sensorData[tankIndex]?.[sensorIndex]?.range_low_CO2|| ""}
+                    onChange={(e) =>
+                      handleInputChange(tankIndex, sensorIndex, "range_low_CO2", e.target.value)
+                    }
+                  /></td>
 
-                <tr>
-                  <td><label htmlFor={`range_high-${tankIndex}-${sensorIndex}`}>CO2 Range - High:</label></td>
+                  <td><label htmlFor={`range_high-${tankIndex}-${sensorIndex}`}>High:</label></td>
                   <td><input
-                  type="number"
-                  id={`range_high_CO2-${tankIndex}-${sensorIndex}`}
-                  value={sensorData[tankIndex]?.[sensorIndex]?.range_high_CO2 || ""}
-                  onChange={(e) =>
-                    handleInputChange(tankIndex, sensorIndex, "range_high_CO2", e.target.value)
-                  }
-                /></td>
+                      type="number"
+                      id={`range_high_CO2-${tankIndex}-${sensorIndex}`}
+                      value={sensorData[tankIndex]?.[sensorIndex]?.range_high_CO2 || ""}
+                      onChange={(e) =>
+                        handleInputChange(tankIndex, sensorIndex, "range_high_CO2", e.target.value)
+                      }
+                    /></td>
+                    </tr>
                 </tr>
 
                 {/* DO high/low ranges */}
                 <tr>
-                  <td><label htmlFor={`range_low_DO-${tankIndex}-${sensorIndex}`}>DO Range - Low:</label></td>
+                  <td><label>DO Range - </label></td>
+                  <tr>
+                  <td><label htmlFor={`range_low_DO-${tankIndex}-${sensorIndex}`}>Low:</label></td>
                   <td><input
-                type="number"
-                id={`range_low_DO-${tankIndex}-${sensorIndex}`}
-                value={sensorData[tankIndex]?.[sensorIndex]?.range_low_DO || ""}
-                onChange={(e) =>
-                  handleInputChange(tankIndex, sensorIndex, "range_low_DO", e.target.value)
-                }
-                /></td>
-                </tr>
+                    type="number"
+                    id={`range_low_DO-${tankIndex}-${sensorIndex}`}
+                    value={sensorData[tankIndex]?.[sensorIndex]?.range_low_DO || ""}
+                    onChange={(e) =>
+                      handleInputChange(tankIndex, sensorIndex, "range_low_DO", e.target.value)
+                    }
+                  /></td>
 
                 <tr>
-                  <td><label htmlFor={`range_high_DO-${tankIndex}-${sensorIndex}`}>DO Range - High:</label></td>
+                  <td><label htmlFor={`range_high_DO-${tankIndex}-${sensorIndex}`}>High:</label></td>
                   <td><input
                   type="number"
                   id={`range_high_DO-${tankIndex}-${sensorIndex}`}
@@ -262,9 +264,13 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
                   }
                 /></td>
                 </tr>
-              </table>
+                </tr>
+                </tr>
+                </td>
             </div>
           ))}
+          </tr>
+          </table>
           </div>
       ))}
       <button type="submit">Submit</button>
