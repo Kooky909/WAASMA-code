@@ -76,8 +76,8 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
           title: { display: true, text: 'Time',},
         },
         y: {
-          min: CO2L*0.5,
-          max: CO2H*1.5,
+          min: CO2L,
+          max: CO2H,
           ticks: {
             callback: function(value) {
               if (value == CO2rangeLow) {
@@ -99,8 +99,8 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
           title: {display: true,text: 'Time',},
         },
         y: {
-          min: DOL*0.5,
-          max: DOH*1.5,
+          min: DOL,
+          max: DOH,
           ticks: {
             callback: function(value) {
               if (value == DOrangeLow) {

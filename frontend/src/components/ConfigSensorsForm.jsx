@@ -95,18 +95,29 @@ const ConfigSensorsForm = ({ onFormSubmit }) => {
     const options = {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        'Authorization': `Bearer ${localStorage.getItem("token")}`
       },
       body: JSON.stringify({ data })
     };
 
     try {
       const response = await fetch(url, options);
-      if (response.status !== 201 && response.status !== 200) {
-        const responseData = await response.json();
-        setErrorMessage(responseData.message || "Failed to configure sensors."); // Needs backend message or generic error
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert('Your session has expired. Please log in again.');
+          window.location.href = '/';
+        } else if (response.status === 403) {
+          alert('You do not have permission to access this resource.');
+        } else {
+          const responseData = await response.json();
+          alert(responseData.message || "Failed to configure sensors.");
+        }
       } else {
-      onFormSubmit(); // Callback function to update UI or state after success
+        // Process the response if the status is OK
+        const data = await response.json();
+        console.log(data);
+        onFormSubmit();
       }
     } catch (error) {
       setErrorMessage("An unexpected error occurred. Please try again.");

@@ -2,15 +2,22 @@ import { useState, useEffect } from "react";
 import UserList from "./UserList";
 import UserSettings from "./UserSettings";
 import CreateUserForm from "./CreateUserForm";
+import { jwtDecode } from "jwt-decode";
 import "./UsersStyles.css";
 
 function Users() {
   const [users, setUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+  const [role, setRole] = useState(null);
 
   // Fetch users on initial render
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    const decoded = jwtDecode(token);
+    console.log(decoded.sub)
+    setRole(decoded.role);
+    setCurrentUser(decoded.sub); 
     fetchUsers();
   }, []);
 
@@ -48,9 +55,10 @@ function Users() {
     <div className="users-container">
       <header className="users-header">
         <h1>Manage Users</h1>
-        <UserSettings />
+        <UserSettings currentUserId={currentUser}/>
       </header>
       <br />
+      {role === "admin" && (
       <main className="users-main">
         <UserList
           users={users}
@@ -61,7 +69,7 @@ function Users() {
           Create New User
         </button>
       </main>
-
+      )}
       {isModalOpen && (
         <div className="modal">
           <div className="modal-content">

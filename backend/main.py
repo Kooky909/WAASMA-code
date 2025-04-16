@@ -133,7 +133,7 @@ def main():
     # This loops through all the sensors
     for sensor in sensor_config:
         # dynamically create a new collection and add to the tuple, this will read from sensor collection
-        CO2_db_name = f"{sensor["name"]}_CO2_collection_run{settings_list[0]["run_number"]}"   # db for CO2
+        CO2_db_name = f"{sensor['name']}_CO2_collection_run{settings_list[0]["run_number"]}"   # db for CO2
         DO_db_name = f"{sensor["name"]}_DO_collection_run{settings_list[0]["run_number"]}"   # db for DO
         CO2_db_collection = db[CO2_db_name]
         DO_db_collection = db[DO_db_name]
@@ -196,10 +196,14 @@ def main():
                 DO_db_name = f"{sensor["name"]}_DO_collection_run{settings_list[0]["run_number"]}"   # db for DO
                 CO2_db_collection = db[CO2_db_name]
                 DO_db_collection = db[DO_db_name]
-                #water_sensor = Water_Sensor(sensor["connection"], sensor["baud_rate"])
-                system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
-                system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
-
+                if sensor["connection"] == "COM3":
+                    water_sensor = Water_Sensor(sensor["connection"], sensor["baud_rate"])
+                    system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+                    system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
+                else:
+                    system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+                    system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
+                
             for data_set in system_state.get("raw_sensors"):
                 system_state.add_to_dict("Sensor List", f"{data_set[2]}-{data_set[3]}", new_sensor_wrapper(*data_set))
 

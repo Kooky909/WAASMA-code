@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, abort
+from flask_jwt_extended import create_access_token, JWTManager, verify_jwt_in_request, get_jwt
 from functools import wraps
 import json
 import os
@@ -9,10 +10,14 @@ from sys_state import Sys_State
 import time
 from datetime import datetime, timedelta
 from db_config import user_collection, sensor_collection, settings_collection
+import jwt
+import secrets
 
 class Flask_App():
     # Shared with main
     system_state = None
+    SECRET_KEY = secrets.token_hex(32)
+    ALGORITHM = 'HS256'
 
     # constructor
     def __init__(self, state) -> None:
@@ -22,17 +27,94 @@ class Flask_App():
         self.state = state # This is a pointer to the system state object in main
         CORS(self.app, resources={r"/*": {"origins": "http://localhost:5173"}})  # This allows the frontend and backend to connect
 
+        self.app.config["JWT_SECRET_KEY"] = self.SECRET_KEY
+        self.app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+        self.app.config["JWT_COOKIE_SECURE"] = True
+        self.app.config["JWT_COOKIE_HTTPONLY"] = True
+        self.app.config["JWT_COOKIE_SAMESITE"] = "Strict"
+        self.jwt = JWTManager(self.app)
+
+        ##############################################################
+        #
+        #   WORKING ON USER ROLES / PERMS
+        #
+        ##############################################################
+
         # Implementation of user roles
         def require_role(roles):
             def decorator(f):
                 @wraps(f)  # Preserve function metadata
                 def decorated_function(*args, **kwargs):
-                    user_role = request.headers.get("Role")
-                    if user_role not in roles:
-                        abort(403)  # Forbidden
+                    token = request.headers.get("Authorization")
+                    if not token:
+                        abort(401, description="Token is missing")  # Unauthorized
+
+                    token = token.replace("Bearer ", "")  # Remove the 'Bearer ' part if it's included
+                    try:
+                        # Decode the token to get the user info (including role)
+                        decoded_token = jwt.decode(token, self.app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+                        user_role = decoded_token.get("role")
+                        
+                        # Check if the role is in the required roles
+                        if user_role not in roles:
+                            abort(403, description="Forbidden: Insufficient role")  # Forbidden
+                        
+                    except jwt.ExpiredSignatureError:
+                        abort(401, description="Token has expired")  # Token expired
+                    except jwt.InvalidTokenError:
+                        abort(401, description="Invalid token")  # Invalid token
                     return f(*args, **kwargs)
                 return decorated_function
             return decorator
+        
+        @self.app.route("/login", methods=["POST"])    # frontend calls login with user/password
+        def login():
+            data = request.json
+            email = data.get('userEmail')
+            password = data.get('userPassword')  # gets the data 
+
+            user = user_collection.find_one({'email': email})     # looks up the username in the db
+
+            if user and ( password == user['password'] ):    # checks password
+                print("im making a token now....")
+                token = create_access_token(
+                    identity=str(user['_id']), 
+                    additional_claims={
+                        'role': user['role'],
+                        'firstName': user['firstName'],
+                        'last_name': user['lastName']
+                })   # if successful, create token
+                print("i made a token!")
+                response = jsonify({'message': 'Login successful'})
+                response = jsonify({
+                    'message': 'Login successful',
+                    'token': token,
+                    'userId': str(user['_id']),
+                    'role': user['role'],
+                    'firstName': user['firstName'],
+                    'lastName': user['lastName'],
+                })
+                return response, 200
+            else:
+                return jsonify({'message': 'Invalid credentials'}), 401
+            
+
+        @self.app.route("/user_authen/", methods=["POST"])
+        def user_authen():
+            credentials = request.json
+            print(credentials.get("userEmail"))
+            user = user_collection.find_one({"email": credentials.get("userEmail")})
+            if not user:
+                return {"success": False, "message": "User does not exist"}
+            user["_id"] = str(user["_id"])
+            if user["password"] == credentials.get("userPassword"):
+                return {"success": True, "message": "Authentication successful", "user": user}
+            else:
+                return {"success": False, "message": "Invalid password"}
+        
+
+        #########################################################################
+        #########################################################################
 
         # This route returns a list of sensors from the sensor collection
         @self.app.route("/sensors", methods=["GET"])
@@ -58,7 +140,7 @@ class Flask_App():
             return jsonify({"backend_reset": reset_sensors})
         
         @self.app.route("/config_sensors", methods=["PATCH"])
-        #@require_role(["admin", "operator"])
+        @require_role(["admin"])
         def config_sensors():
             data = request.json['data']
             print(data)
@@ -87,7 +169,7 @@ class Flask_App():
 
         # This route updates a high/low range values for a sensor in the sensor collection
         @self.app.route("/change_range/<id>", methods=["PATCH"])
-        #@require_role(["admin", "operator"])
+        @require_role(["admin"])
         def change_range(id):
             sensor_id = {"_id": ObjectId(id)}  # Correctly format the sensor_id
             existing_sensor = sensor_collection.find_one(sensor_id) # Check if the sensor exists
@@ -119,6 +201,7 @@ class Flask_App():
             
         #updates the frequency setting in the database on the provided ID and JSON request.
         @self.app.route("/change_setting/<id>", methods=["PATCH"])
+        @require_role(["admin"])
         def change_setting(id):
             try:
                 data = request.json   ###### IS THIS RIGHT???
@@ -140,7 +223,7 @@ class Flask_App():
             
 
         @self.app.route("/stop_run", methods=["PATCH"])
-        #@require_role(["admin", "operator"])
+        @require_role(["admin"])
         def stop_run():
             data = request.json
             setting_id = ObjectId(data.get('setting_id'))
@@ -218,42 +301,29 @@ class Flask_App():
         #                        USER PAGE ROUTES -- talk to user collection
         ####################################################################
 
-        @self.app.route("/user_authen/", methods=["POST"])
-        def user_authen():
-            credentials = request.json
-            print(credentials.get("userEmail"))
-            user = user_collection.find_one({"email": credentials.get("userEmail")})
-            if not user:
-                return {"success": False, "message": "User does not exist"}
-            user["_id"] = str(user["_id"])
-            if user["password"] == credentials.get("userPassword"):
-                return {"success": True, "message": "Authentication successful", "user": user}
-            else:
-                return {"success": False, "message": "Invalid password"}
-
         # This route returns a list of users from users collection
         @self.app.route("/users", methods=["GET"])
-        #@require_role(["admin", "operator"])
         def get_users():
             users_cursor = user_collection.find()
             json_users = list(map(lambda x: json.loads(json_util.dumps(x)), users_cursor))
             return jsonify({"users": json_users})
 
         @self.app.route("/create_user", methods=["POST"])
-        #@require_role(["admin"])
         def create_user():
             data = request.json
-            user_role = request.headers.get("Role")
-            if user_role != "admin":
-                return jsonify({"message": "Unauthorized access"}), 403
-            username = data.get("username")
+            firstName = data.get("firstName")
+            lastName = data.get("lastName")
+            email = data.get("email")
             password = data.get("password")
-            role = data.get("role", "observer")
-            if not username or not password:
-                return jsonify({"message: Missing required fields"}), 400
-            if user_collection.find_one({"username": username}):
-                return jsonify({"message:" "User already exists"}), 400
-            user_collection.insert_one({"username": username, "password": password, "role": role})
+            role = data.get("role")
+            notifs = data.get("notifs")
+            if not notifs:
+                notifs = "no"
+            if not email or not password:
+                return jsonify({"message": "Missing required fields"}), 400
+            if user_collection.find_one({"username": email}):
+                return jsonify({"message": "User already exists"}), 400
+            user_collection.insert_one({"firstName": firstName, "lastName": lastName, "email": email, "password": password, "role": role, "notifs": notifs})
             return jsonify({"message": "User created successfully"}), 201
 
         @self.app.route("/update_user/<id>", methods=["PATCH"])
@@ -274,7 +344,6 @@ class Flask_App():
 
         # This route deletes a user
         @self.app.route("/delete_user/<id>", methods=["DELETE"])
-        #@require_role(["admin", "operator"])
         def delete_user(id):
             user_id = {"_id": ObjectId(id)}
             existing_user = user_collection.find_one(user_id)
@@ -286,7 +355,6 @@ class Flask_App():
         
         # This route returns the settings of a user
         @self.app.route("/user_settings/<id>", methods=["GET"])
-        #@require_role(["admin", "operator"])
         def user_settings(id):
             user_id = {"_id": ObjectId(id)}
             existing_user = user_collection.find_one(user_id)
@@ -295,26 +363,6 @@ class Flask_App():
 
             existing_user["_id"] = str(existing_user["_id"])
             return jsonify({"settings": existing_user}), 200
-        
-        ####################################################################
-        #         USER ROLES
-        ####################################################################
-        # Commented out because it now exists above
-        # @self.app.route("/user_authen/", methods = ["POST"])
-        # def user_authen():
-        #     data = request.json
-        #     username = data.get("username")
-        #     password = data.get("password")
-
-        #     if not username or not password:
-        #         return jsonify({"success": False, "message": "Missing credentials"}), 400
-            
-        #     user = user_collection.find_one({"username": username})
-        #     if not user or user.get("password") != password:
-        #         return jsonify({"success": False, "message": "Invalid username or password"}), 401
-            
-        #     role = user.get("role", "observer")
-        #     return jsonify({"success": True, "message": "Login successful", "role": role}), 200
 
         #########################################
         #      WEB SOCKET STUFF

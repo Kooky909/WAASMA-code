@@ -5,7 +5,9 @@ const CreateUserForm = ({ existingUser = {}, updateCallback }) => {
     const [firstName, setFirstName] = useState(existingUser.firstName || "");
     const [lastName, setLastName] = useState(existingUser.lastName || "");
     const [email, setEmail] = useState(existingUser.email || "");
+    const [password, setPassword] = useState(existingUser.password || "");
     const [role, setRole] = useState(existingUser.role || "");
+    const [notifs, setNotifs] = useState(existingUser.notifs || "");
 
     const updating = Object.entries(existingUser).length !== 0
 
@@ -16,7 +18,9 @@ const CreateUserForm = ({ existingUser = {}, updateCallback }) => {
             firstName,
             lastName,
             email,
-            role
+            password,
+            role,
+            notifs
         }
         const url = "http://127.0.0.1:5000/" + (updating ? `update_user/${existingUser._id}` : "create_user")
         const options = {
@@ -27,10 +31,21 @@ const CreateUserForm = ({ existingUser = {}, updateCallback }) => {
             body: JSON.stringify(data)
         }
         const response = await fetch(url, options)
-        if (response.status !== 201 && response.status !== 200) {
-            const data = await response.json()
-            alert(data.message)
-        } else {
+        if (!response.ok) {
+            if (response.status === 401) {
+              alert('Your session has expired. Please log in again.');
+              window.location.href = '/';
+            } else if (response.status === 403) {
+              alert('You do not have permission to access this resource.');
+            } else {
+              // Other errors, like 500, etc.
+              const responseData = await response.json()
+              alert('Something went wrong:', responseData.message);
+            }
+          } else {
+            // Process the response if the status is OK
+            const responseData = await response.json();
+            console.log(responseData);
             updateCallback()
         }
     }
@@ -62,6 +77,15 @@ const CreateUserForm = ({ existingUser = {}, updateCallback }) => {
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                />
+            </div>
+            <div>
+                <label htmlFor="password">Password:</label>
+                <input
+                    type="text"
+                    id="password"
+                    value={null}
+                    onChange={(e) => setPassword(e.target.value)}
                 />
             </div>
             <div>

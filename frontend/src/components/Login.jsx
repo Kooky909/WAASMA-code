@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { jwtDecode } from "jwt-decode";
 import "./Login.css";
 
 function Login() {
@@ -11,8 +12,6 @@ function Login() {
   const navigate = useNavigate();
 
   // Take user and password and send it to the backend
-  // Receive an authorized or not authorized
-  // *** no functionality now, submit takes you to home ***
   const onSubmit = async (e) => {    
     e.preventDefault()
     setErrorMessage("");
@@ -21,7 +20,7 @@ function Login() {
       userEmail,
       userPassword
     }
-    const url = `http://127.0.0.1:5000/user_authen/`;
+    const url = `http://127.0.0.1:5000/login`;
     const options = {
       method: "POST",
       headers: {
@@ -33,56 +32,30 @@ function Login() {
     try {
       const response = await fetch(url, options);
       const result = await response.json();
+      console.log(result)
 
       if (response.status !== 200) {
-          setErrorMessage(result.message || "Invalid email or password.");
+        setErrorMessage(result.message || "Invalid email or password.");
       } else {
-          if (result.success) {
-              console.log("Login Successful:", result.message);
+        console.log("Login Successful:", result.message);
+        const token = result.token;
+        localStorage.removeItem("token");
+        localStorage.setItem("token", token);
 
-              // Store user role in localStorage
-              if(result.user){
-                  localStorage.setItem("userRole", result.user.role);
-
-                  // Navigate based on the role
-                  if (result.user.role === "admin") {
-                      navigate("/Home");
-                  } else if (result.user.role === "operator") {
-                      navigate("/operator-dashboard");
-                  } else if (result.user.role === "observer") {
-                      navigate("/observer-dashboard");
-                  } else {
-                      setErrorMessage("Unknown role. Contact admin");
-                  }
-              } else {
-                  setErrorMessage("User data missing from response.");
-            }
-
-          } else {
-              setErrorMessage(result.message || "Invalid credentials.");
-          }
-        }
+        const decoded = jwtDecode(token);
+        console.log(decoded.sub)
+        console.log(decoded.role)
+        
+        if (decoded.role === "admin" || decoded.role === "operator" || decoded.role === "observer") {
+          navigate("/Home");
+        } else {
+          setErrorMessage("Unknown role in token.");
+        } 
+      }
     } catch (error) {
       setErrorMessage("Network error or server unavailable. Please try again later.");
       console.error("Login Error:", error);
     }
-    
-
-      /*if (response.status !== 200 && response.status !== 201) {
-        setErrorMessage(result.message || "Invalid email or password.");
-      } else {
-        if (result.success) {
-          console.log(result.message);
-          navigate("/home");
-        } else {
-          setErrorMessage(result.message || "Invalid credentials.");
-        }
-      }
-    } catch (error) {
-      setErrorMessage("Incorrect Email or Password. Please try again.");
-      console.error("Login error:", error);
-    } */
-    
   };
 
   return (

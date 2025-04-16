@@ -135,7 +135,6 @@ const HomeDisplay = ({ }) => {
             data: newData,
             borderColor: `hsl(${index * 60}, 70%, 50%, 0.7)`,
             backgroundColor: `hsl(${index * 60}, 70%, 80%, 0.7)`,
-            fill: true,
             lineTension: 0.4,
           };
         })

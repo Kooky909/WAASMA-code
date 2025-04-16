@@ -30,16 +30,26 @@ const ChangeRangeForm = ({ sensorChange = {}, updateCallback }) => {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        'Authorization': `Bearer ${localStorage.getItem("token")}`
       },
       body: JSON.stringify(data),
     };
 
     try {
       const response = await fetch(url, options);
-      if (response.status !== 201 && response.status !== 200) {
-        const responseData = await response.json();
-        setMessage(responseData.message || "Failed to change range.");
-        setMessageType("error");
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert('Your session has expired. Please log in again.');
+          window.location.href = '/';
+        } else if (response.status === 403) {
+          alert('You do not have permission to access this resource.');
+        } else {
+          // Other errors, like 500, etc.
+          alert('Something went wrong. Please try again later.');
+          const responseData = await response.json();
+          setMessage(responseData.message || "Failed to change range.");
+          setMessageType("error");
+        }
       } else {
         setMessage("Range successfully updated.");
         setMessageType("success");

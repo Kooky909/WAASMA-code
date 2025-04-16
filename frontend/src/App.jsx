@@ -5,6 +5,7 @@ import Analysis from './components/Analysis';
 import Settings from './components/Settings';
 import Users from './components/Users';
 import Navbar from './Navbar';
+import PrivateRoute from './PrivateRoute';
 import "./App.css";
 
 function App() {
@@ -14,11 +15,11 @@ function App() {
       <Router>
         <Navbar />
         <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/analysis" element={<Analysis />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/users" element={<Users />} />
+          <Route path="/" element={<Login />} /> 
+          <Route path="/home" element={ <PrivateRoute> <Home /> </PrivateRoute> } />
+          <Route path="/analysis" element={ <PrivateRoute> <Analysis /> </PrivateRoute> } />
+          <Route path="/settings" element={ <PrivateRoute> <Settings /> </PrivateRoute> } />
+          <Route path="/users" element={ <PrivateRoute> <Users /> </PrivateRoute> } />
         </Routes>
       </Router>
     </>

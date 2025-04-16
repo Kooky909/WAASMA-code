@@ -2,25 +2,32 @@ import React, { useState, useEffect } from "react";
 import EditUserSettingsForm from "./EditUserSettingsForm";
 import "./UsersStyles.css";
 
-const UserSettings = () => {
+const UserSettings = ({ currentUserId }) => {
   const [userSettings, setSettings] = useState(null); // Initialized to null for better error handling
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading]= useState(true); // Tracks loading state
-
-  const currentUserId = "6743383f48ce505f5fb7be0a";
 
   // Fetch user settings when the component mounts
   useEffect(() => {
+    if (currentUserId == null) return;
     fetchUserSettings();
-  }, []);
+  }, [currentUserId]);
 
   const fetchUserSettings = async () => {
     try {
       const response = await fetch(`http://127.0.0.1:5000/user_settings/${currentUserId}`);
       if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
-      }
-      const data = await response.json();
+        if (response.status === 401) {
+          alert('Your session has expired. Please log in again.');
+          window.location.href = '/';
+        } else if (response.status === 403) {
+          alert('You do not have permission to access this resource.');
+        } else {
+          // Other errors, like 500, etc.
+          const data = await response.json()
+          alert('Something went wrong:', data.message);
+        }
+      } else {
+        const data = await response.json();
       // Format the user settings correctly
       const formattedSettings = {
         ...data.settings,
@@ -28,6 +35,7 @@ const UserSettings = () => {
       };
       console.log("Fetched and formatted settings:", formattedSettings);
       setSettings(formattedSettings);
+      }
     } catch (error) {
       console.error("Failed to fetch user settings:", error.message);
     }

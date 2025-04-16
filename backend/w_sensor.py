@@ -23,7 +23,7 @@ class Water_Sensor:
                 print(valueInString)
                 data_wo_header = valueInString[5:]
                 data_entries = data_wo_header.split(",")
-                if len(data_entries) == 13:
+                if len(data_entries) == 15:
                     waiting_for_read = False
 
             # Return 5th entry - the CO2 data
