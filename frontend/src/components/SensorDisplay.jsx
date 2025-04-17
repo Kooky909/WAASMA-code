@@ -28,6 +28,7 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
   const [DOData, setDOData] = useState({ labels: [], datasets: [], });
   const [CO2chartOptions, setCO2ChartOptions] = useState({});
   const [DOchartOptions, setDOChartOptions] = useState({});
+  const [sensorData, setSensorData] = useState({ datasets : [] });
 
   // Web socket things
   useEffect(() => {
@@ -68,6 +69,11 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
 
   const resetChartOptions = ( CO2L, CO2H, DOL, DOH ) => {
     setCO2ChartOptions({
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
       scales: {
         x: {
           type: 'time',
@@ -92,6 +98,11 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
       animation: false,
     });
     setDOChartOptions({
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
       scales: {
         x: {
           type: 'time',
@@ -137,7 +148,7 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
       const sensor1Data = newData[sensor1Key];
       const sensor2Data = newData[sensor2Key];
 
-      setCO2Data(() => ({
+      setSensorData(() => ({
         datasets: [
           {
             label: sensor1Key,
@@ -157,12 +168,7 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
             },
             pointHoverBackgroundColor: 'yellow',
             pointHoverBorderColor: 'yellow',
-          }
-        ]
-      }));
-
-      setDOData(() => ({
-        datasets: [
+          },
           {
             label: sensor2Key,
             data: sensor2Data.map((entry) => ({
@@ -222,78 +228,49 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
       const sensor1Data = newData[sensor1Key];
       const sensor2Data = newData[sensor2Key];
 
-      setCO2Data((prevData) => {
-        const existingSensorData = prevData.datasets.find(
-          (dataset) => dataset.label === sensor1Key
-        );
+      setSensorData((prevData) => {
+        const updateSensorDataset = (datasets, key, dataPoint) => {
+          const existingSensorData = datasets.find((dataset) => dataset.label === key);
       
-        const newDataPoint = {
+          if (existingSensorData) {
+            return datasets.map((dataset) => {
+              if (dataset.label === key) {
+                const newData = [...dataset.data, dataPoint];
+                if (newData.length > 100) newData.shift();
+                return { ...dataset, data: newData };
+              }
+              return dataset;
+            });
+          } else {
+            const newDataset = {
+              label: key,
+              data: [dataPoint],
+              borderColor: 'rgba(75,192,192,1)',
+              backgroundColor: 'rgba(75,192,192,0.2)',
+              pointBackgroundColor: 'blue',
+              pointBorderColor: 'blue',
+              lineTension: 0.4,
+            };
+            return [...datasets, newDataset];
+          }
+        };
+      
+        const co2DataPoint = {
           x: new Date(sensor1Data.time * 1000).toISOString(),
           y: sensor1Data.value,
         };
       
-        let updatedDatasets;
-      
-        if (existingSensorData) {
-          // Create a shallow copy of the datasets
-          updatedDatasets = prevData.datasets.map((dataset) => {
-            if (dataset.label === sensor1Key) {
-              const newData = [...dataset.data, newDataPoint];
-              if (newData.length > 100) newData.shift();
-              return { ...dataset, data: newData };
-            }
-            return dataset;
-          });
-        } else {
-          const newDataset = {
-            label: sensor1Key,
-            data: [newDataPoint],
-            borderColor: 'rgba(75,192,192,1)',
-            backgroundColor: 'rgba(75,192,192,0.2)',
-            pointBackgroundColor: 'blue',
-            pointBorderColor: 'blue',
-            lineTension: 0.4,
-          };
-          updatedDatasets = [...prevData.datasets, newDataset];
-        }
-        return { datasets: updatedDatasets };
-      });
-
-      setDOData((prevData) => {
-        const existingSensorData = prevData.datasets.find(
-          (dataset) => dataset.label === sensor2Key
-        );
-      
-        const newDataPoint = {
+        const doDataPoint = {
           x: new Date(sensor2Data.time * 1000).toISOString(),
           y: sensor2Data.value,
         };
       
-        let updatedDatasets;
-        if (existingSensorData) {
-          // Create a shallow copy of the datasets
-          updatedDatasets = prevData.datasets.map((dataset) => {
-            if (dataset.label === sensor1Key) {
-              const newData = [...dataset.data, newDataPoint];
-              if (newData.length > 100) newData.shift();
-              return { ...dataset, data: newData };
-            }
-            return dataset;
-          });
-        } else {
-          const newDataset = {
-            label: sensor2Key,
-            data: [newDataPoint],
-            borderColor: 'rgba(75,192,192,1)',
-            backgroundColor: 'rgba(75,192,192,0.2)',
-            pointBackgroundColor: 'blue',
-            pointBorderColor: 'blue',
-            lineTension: 0.4,
-          };
-          updatedDatasets = [...prevData.datasets, newDataset];
-        }
+        let updatedDatasets = prevData.datasets;
+        updatedDatasets = updateSensorDataset(updatedDatasets, sensor1Key, co2DataPoint);
+        updatedDatasets = updateSensorDataset(updatedDatasets, sensor2Key, doDataPoint);
+      
         return { datasets: updatedDatasets };
-      }); 
+      });
     } catch (error) {
         console.error('Error fetching data:', error);
     }
@@ -343,13 +320,13 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
         <tbody>
           <tr>
             <tr>
-            <td>CO2 Reading:</td>
-            <td>{sensorValueCO2 || "..."}</td>
+            <td><h3>CO2 Reading:</h3></td></tr>
+            <tr><td><h1>{sensorValueCO2 || "..."}</h1></td>
             </tr>
             <td>
               <Line
                 data={{
-                  datasets: CO2Data.datasets,
+                  datasets: sensorData.datasets,
                 }}
                 options={ CO2chartOptions }
               width={300}
@@ -359,13 +336,13 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
           </tr>
           <tr>
             <tr>
-            <td>DO Reading:</td>
-            <td>{sensorValueDO || "..."}</td>
+            <td><h3>DO Reading:</h3></td></tr>
+            <tr><td><h1>{sensorValueDO || "..."}</h1></td>
             </tr>
             <td>
             <Line
                 data={{
-                  datasets: DOData.datasets,
+                  datasets: sensorData.datasets,
                 }}
                 options={ DOchartOptions }
               width={300}

@@ -133,20 +133,30 @@ def main():
     # This loops through all the sensors
     for sensor in sensor_config:
         # dynamically create a new collection and add to the tuple, this will read from sensor collection
-        CO2_db_name = f"{sensor['name']}_CO2_collection_run{settings_list[0]["run_number"]}"   # db for CO2
-        DO_db_name = f"{sensor["name"]}_DO_collection_run{settings_list[0]["run_number"]}"   # db for DO
-        CO2_db_collection = db[CO2_db_name]
-        DO_db_collection = db[DO_db_name]
-        CO2_db_collection.insert_one({"init": "collection created"})
-        DO_db_collection.insert_one({"init": "collection created"})
-        if sensor["connection"] == "COM3":
-            water_sensor = Water_Sensor(sensor["connection"], sensor["baud_rate"])
-            system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
-            system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
-        else:
+        if sensor["connection"] == "test":
+            CO2_db_name = f"{sensor['name']}_CO2_test_collection_run{settings_list[0]["run_number"]}"   # db for CO2
+            DO_db_name = f"{sensor["name"]}_DO_test_collection_run{settings_list[0]["run_number"]}"   # db for DO
+            CO2_db_collection = db[CO2_db_name]
+            DO_db_collection = db[DO_db_name]
+            CO2_db_collection.insert_one({"init": "collection created"})
+            DO_db_collection.insert_one({"init": "collection created"})
             system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
             system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
-        #system_state.add_to_list("raw_sensors", (Air_Sensor("COM5", 19200), "Sensor #" + str(number), 40000, 1, db_list[number]))
+        else:
+            CO2_db_name = f"{sensor['name']}_CO2_collection_run{settings_list[0]["run_number"]}"   # db for CO2
+            DO_db_name = f"{sensor["name"]}_DO_collection_run{settings_list[0]["run_number"]}"   # db for DO
+            CO2_db_collection = db[CO2_db_name]
+            DO_db_collection = db[DO_db_name]
+            CO2_db_collection.insert_one({"init": "collection created"})
+            DO_db_collection.insert_one({"init": "collection created"})
+            if sensor["type"] == "water":
+                water_sensor = Water_Sensor(sensor["connection"], sensor["baud_rate"])
+                system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+                system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
+            elif sensor["type"] == "air":
+                air_sensor = Air_Sensor(sensor["connection"], sensor["baud_rate"])
+                system_state.add_to_list("raw_sensors", (air_sensor, sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+                system_state.add_to_list("raw_sensors", (air_sensor, sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
     
     print("sensors connected")
 
@@ -182,7 +192,6 @@ def main():
             print("all sensor threads joined")
 
             # repeat the startup procedure
-
             # Empty raw sensors, sensor threads, and sensor list
             system_state.set("raw_sensors", [])
             sensor_threads = []
@@ -191,19 +200,31 @@ def main():
             # DB query to reset sensors
             sensor_config = sensor_collection.find()   # get all the sensors
             for sensor in sensor_config:
-                # dynamically create a new collection and add to the tuple, this will read from sensor collection
-                CO2_db_name = f"{sensor["name"]}_CO2_collection_run{settings_list[0]["run_number"]}"   # db for CO2
-                DO_db_name = f"{sensor["name"]}_DO_collection_run{settings_list[0]["run_number"]}"   # db for DO
-                CO2_db_collection = db[CO2_db_name]
-                DO_db_collection = db[DO_db_name]
-                if sensor["connection"] == "COM3":
-                    water_sensor = Water_Sensor(sensor["connection"], sensor["baud_rate"])
-                    system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
-                    system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
-                else:
+                if sensor["connection"] == "test":
+                    CO2_db_name = f"{sensor['name']}_CO2_test_collection_run{settings_list[0]["run_number"]}"   # db for CO2
+                    DO_db_name = f"{sensor["name"]}_DO_test_collection_run{settings_list[0]["run_number"]}"   # db for DO
+                    CO2_db_collection = db[CO2_db_name]
+                    DO_db_collection = db[DO_db_name]
+                    CO2_db_collection.insert_one({"init": "collection created"})
+                    DO_db_collection.insert_one({"init": "collection created"})
                     system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
                     system_state.add_to_list("raw_sensors", (Random_Test_Sensor(), sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
-                
+                else:
+                    CO2_db_name = f"{sensor['name']}_CO2_collection_run{settings_list[0]["run_number"]}"   # db for CO2
+                    DO_db_name = f"{sensor["name"]}_DO_collection_run{settings_list[0]["run_number"]}"   # db for DO
+                    CO2_db_collection = db[CO2_db_name]
+                    DO_db_collection = db[DO_db_name]
+                    CO2_db_collection.insert_one({"init": "collection created"})
+                    DO_db_collection.insert_one({"init": "collection created"})
+                    if sensor["type"] == "water":
+                        water_sensor = Water_Sensor(sensor["connection"], sensor["baud_rate"])
+                        system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+                        system_state.add_to_list("raw_sensors", (water_sensor, sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
+                    elif sensor["type"] == "air":
+                        air_sensor = Air_Sensor(sensor["connection"], sensor["baud_rate"])
+                        system_state.add_to_list("raw_sensors", (air_sensor, sensor["_id"], sensor["name"], "CO2", float(sensor["measures"]["CO2"]["range_high"]), float(sensor["measures"]["CO2"]["range_low"]), CO2_db_collection))
+                        system_state.add_to_list("raw_sensors", (air_sensor, sensor["_id"], sensor["name"], "DO", float(sensor["measures"]["DO"]["range_high"]), float(sensor["measures"]["DO"]["range_low"]), DO_db_collection))
+    
             for data_set in system_state.get("raw_sensors"):
                 system_state.add_to_dict("Sensor List", f"{data_set[2]}-{data_set[3]}", new_sensor_wrapper(*data_set))
 
@@ -322,12 +343,14 @@ def sensor_proc(sensor_wrapper):
         # release semaphore
         system_state.hard_release()
 
+        # This is the sleep timer functionality
         # sleep
         start_sleep = time.time()
-
         while ( (time.time() - start_sleep) < system_state.get("Read Frequency")) and (not system_state.get("reset sensors")):
             time.sleep(1)
 
+    # disconnect the sensor as terminate/reset sensors is true
+    sensor_wrapper["sensor"].disconnect_port()
 
 #   Provides emails to the email server
 
