@@ -69,11 +69,11 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
 
   const resetChartOptions = ( CO2L, CO2H, DOL, DOH ) => {
     setCO2ChartOptions({
-      plugins: {
+      /*plugins: {
         legend: {
           display: false,
         },
-      },
+      },*/
       scales: {
         x: {
           type: 'time',
@@ -98,11 +98,11 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
       animation: false,
     });
     setDOChartOptions({
-      plugins: {
+      /*plugins: {
         legend: {
           display: false,
         },
-      },
+      },*/
       scales: {
         x: {
           type: 'time',
@@ -323,32 +323,44 @@ const SensorDisplay = ({ inputSensor , onBackendReset }) => {
             <td><h3>CO2 Reading:</h3></td></tr>
             <tr><td><h1>{sensorValueCO2 || "..."}</h1></td>
             </tr>
-            <td>
-              <Line
-                data={{
-                  datasets: sensorData.datasets,
-                }}
-                options={ CO2chartOptions }
-              width={300}
-              height={150}
-            />
-            </td>
+            {(() => {
+              if (!sensorData.datasets[0]) return null;
+              return (
+                <td>
+                  <Line
+                    data={{
+                      datasets: 
+                          [ sensorData.datasets[0]]
+                    }}
+                    options={CO2chartOptions}
+                    width={300}
+                    height={150}
+                  />
+                </td>
+              );
+            })()}
           </tr>
           <tr>
             <tr>
             <td><h3>DO Reading:</h3></td></tr>
             <tr><td><h1>{sensorValueDO || "..."}</h1></td>
             </tr>
-            <td>
-            <Line
-                data={{
-                  datasets: sensorData.datasets,
-                }}
-                options={ DOchartOptions }
-              width={300}
-              height={150}
-            />
-            </td>
+            {(() => {
+              if (!sensorData.datasets[1]) return null;
+              return (
+                <td>
+                  <Line
+                    data={{
+                      datasets: 
+                          [ sensorData.datasets[1]]
+                    }}
+                    options={DOchartOptions}
+                    width={300}
+                    height={150}
+                  />
+                </td>
+              );
+            })()}
           </tr>
         </tbody>
       </table>

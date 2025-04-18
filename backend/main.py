@@ -16,7 +16,7 @@ from pymongo import MongoClient
 import requests
 
 #----------------------------------------------------------------------------------------
-#   Entry Point for the Aqualb Sensor system
+#   Entry Point for the Aqualab Sensor system
 #   See README file for system architecture
 
 #   Summary of File
