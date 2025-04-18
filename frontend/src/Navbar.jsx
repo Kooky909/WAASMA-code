@@ -45,12 +45,8 @@ function Navbar() {
             <ul>
               <li><Link to="/home" onClick={toggleMenu}>Home</Link></li>
               <li><Link to="/analysis" onClick={toggleMenu}>Analysis Tool</Link></li>
-              { ( role === "admin" || role === "operator" ) && (
-                <>
-                  <li><Link to="/settings" onClick={toggleMenu}>Settings</Link></li>
-                  <li><Link to="/users" onClick={toggleMenu}>Manage Users</Link></li>
-                </>
-              )}
+              <li><Link to="/settings" onClick={toggleMenu}>Settings</Link></li>
+              <li><Link to="/users" onClick={toggleMenu}>Manage Users</Link></li>
             </ul>
           </nav>
         )}

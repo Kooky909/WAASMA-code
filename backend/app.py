@@ -318,7 +318,7 @@ class Flask_App():
             role = data.get("role")
             notifs = data.get("notifs")
             if not notifs:
-                notifs = "no"
+                notifs = "yes"
             if not email or not password:
                 return jsonify({"message": "Missing required fields"}), 400
             if user_collection.find_one({"username": email}):

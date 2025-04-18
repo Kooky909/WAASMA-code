@@ -47,7 +47,7 @@ function Login() {
         console.log(decoded.role)
         
         if (decoded.role === "admin" || decoded.role === "operator" || decoded.role === "observer") {
-          navigate("/Home");
+          navigate("/home");
         } else {
           setErrorMessage("Unknown role in token.");
         } 
