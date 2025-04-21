@@ -1,6 +1,10 @@
 import threading
 import copy
 
+# Semaphore protected dictionary
+# Takes a dictionary as the initialization value
+# Locks during any access to the dictionary
+# Supports manually locking and unlocking from other classes
 class Sys_State:
 	lock = None
 	parameters = None

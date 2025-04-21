@@ -82,7 +82,10 @@ system_state = Sys_State({
     "Mail Server": None,
 
     # how often to read the sensors (in seconds)
-    "Read Frequency": 5
+    "Read Frequency": 5,
+
+    # When the last time a batch of emails was sent out
+    "last emails": time.time() - 600
 })
 
 def main():
@@ -325,7 +328,10 @@ def sensor_proc(sensor_wrapper):
 
             # if reading out of range, notify users
             if current_reading["value"] > high or current_reading["value"] < low:
-                notification(sensor_wrapper)
+                # if it has been at least 10 minutes since last email
+                if time.time() - system_state["last emails"] > 600:
+                    notification(sensor_wrapper)
+                    system_state["last emails"] = time.time()
 
             # limit length of recent readings
             while len(sensor_wrapper["recent readings"]) > 0:
